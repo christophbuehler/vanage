@@ -14,7 +14,7 @@
         } else {
             g = this
         }
-        g.Service = f()
+        g.Vanage = f()
     }
 })(function() {
     var define, module, exports;
@@ -870,4 +870,4 @@
         }, {}]
     }, {}, [1])(1)
 });
-//# sourceMappingURL=service.js.map
+//# sourceMappingURL=vanage.js.map
