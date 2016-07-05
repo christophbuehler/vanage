@@ -1,0 +1,7 @@
+test
+node_modules
+dist
+.codeclimate.yml
+.travis.yml
+bower.json
+gulpfile.js
