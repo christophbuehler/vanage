@@ -45,25 +45,167 @@
         1: [function(require, module, exports) {
             'use strict';
 
+            var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function(obj) {
+                return typeof obj;
+            } : function(obj) {
+                return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj;
+            };
+
             var uuid = require('./src/utils/uuid');
             var Service = require('./src/Service');
             var globalIdentifier = uuid();
             var semanticGlobalIdentifier = globalIdentifier.replace(/-/g, '');
 
-            module.exports = function() {
-                window[semanticGlobalIdentifier] = new Service({
-                    identifier: globalIdentifier,
-                    debug: false
-                });
+            module.exports = function(undefined) {
+                function createInitialService() {
+                    return new Service({
+                        identifier: globalIdentifier,
+                        debug: false
+                    });
+                }
 
-                return window[semanticGlobalIdentifier];
+                if ((typeof window === 'undefined' ? 'undefined' : _typeof(window)) !== undefined) {
+                    // Special security setup for browser usage which
+                    // saves the global instance to a guid in the window object
+                    window[semanticGlobalIdentifier] = createInitialService();
+                    return window[semanticGlobalIdentifier];
+                } else {
+                    // Server uses a plain Service instance
+                    return createInitialService();
+                }
             }();
 
         }, {
-            "./src/Service": 5,
-            "./src/utils/uuid": 10
+            "./src/Service": 6,
+            "./src/utils/uuid": 12
         }],
         2: [function(require, module, exports) {
+            // shim for using process in browser
+
+            var process = module.exports = {};
+
+            // cached from whatever global is present so that test runners that stub it
+            // don't break things.  But we need to wrap it in a try catch in case it is
+            // wrapped in strict mode code which doesn't define any globals.  It's inside a
+            // function because try/catches deoptimize in certain engines.
+
+            var cachedSetTimeout;
+            var cachedClearTimeout;
+
+            (function() {
+                try {
+                    cachedSetTimeout = setTimeout;
+                } catch (e) {
+                    cachedSetTimeout = function() {
+                        throw new Error('setTimeout is not defined');
+                    }
+                }
+                try {
+                    cachedClearTimeout = clearTimeout;
+                } catch (e) {
+                    cachedClearTimeout = function() {
+                        throw new Error('clearTimeout is not defined');
+                    }
+                }
+            }())
+            var queue = [];
+            var draining = false;
+            var currentQueue;
+            var queueIndex = -1;
+
+            function cleanUpNextTick() {
+                if (!draining || !currentQueue) {
+                    return;
+                }
+                draining = false;
+                if (currentQueue.length) {
+                    queue = currentQueue.concat(queue);
+                } else {
+                    queueIndex = -1;
+                }
+                if (queue.length) {
+                    drainQueue();
+                }
+            }
+
+            function drainQueue() {
+                if (draining) {
+                    return;
+                }
+                var timeout = cachedSetTimeout(cleanUpNextTick);
+                draining = true;
+
+                var len = queue.length;
+                while (len) {
+                    currentQueue = queue;
+                    queue = [];
+                    while (++queueIndex < len) {
+                        if (currentQueue) {
+                            currentQueue[queueIndex].run();
+                        }
+                    }
+                    queueIndex = -1;
+                    len = queue.length;
+                }
+                currentQueue = null;
+                draining = false;
+                cachedClearTimeout(timeout);
+            }
+
+            process.nextTick = function(fun) {
+                var args = new Array(arguments.length - 1);
+                if (arguments.length > 1) {
+                    for (var i = 1; i < arguments.length; i++) {
+                        args[i - 1] = arguments[i];
+                    }
+                }
+                queue.push(new Item(fun, args));
+                if (queue.length === 1 && !draining) {
+                    cachedSetTimeout(drainQueue, 0);
+                }
+            };
+
+            // v8 likes predictible objects
+            function Item(fun, array) {
+                this.fun = fun;
+                this.array = array;
+            }
+            Item.prototype.run = function() {
+                this.fun.apply(null, this.array);
+            };
+            process.title = 'browser';
+            process.browser = true;
+            process.env = {};
+            process.argv = [];
+            process.version = ''; // empty string to avoid regexp issues
+            process.versions = {};
+
+            function noop() {}
+
+            process.on = noop;
+            process.addListener = noop;
+            process.once = noop;
+            process.off = noop;
+            process.removeListener = noop;
+            process.removeAllListeners = noop;
+            process.emit = noop;
+
+            process.binding = function(name) {
+                throw new Error('process.binding is not supported');
+            };
+
+            process.cwd = function() {
+                return '/'
+            };
+            process.chdir = function(dir) {
+                throw new Error('process.chdir is not supported');
+            };
+            process.umask = function() {
+                return 0;
+            };
+
+        }, {}],
+        3: [function(require, module, exports) {
             'use strict';
 
             var _createClass = function() {
@@ -93,18 +235,45 @@
                 function Cache() {
                     _classCallCheck(this, Cache);
 
-                    this.data = {};
+                    this.internals = {};
+                    this.dirty = false;
                 }
 
                 _createClass(Cache, [{
                     key: 'set',
                     value: function set(key, value) {
-                        this.data[key] = value;
+                        this.internals[key] = value;
+                        this.dirty = true;
                     }
                 }, {
                     key: 'get',
                     value: function get(key) {
-                        return this.data[key];
+                        return this.internals[key];
+                    }
+                }, {
+                    key: 'flush',
+                    value: function flush() {
+                        this.internals = {};
+                    }
+                }, {
+                    key: 'dump',
+                    value: function dump() {
+                        return this.internals;
+                    }
+                }, {
+                    key: 'isDirty',
+                    value: function isDirty() {
+                        return this.dirty;
+                    }
+                }, {
+                    key: 'size',
+                    get: function get() {
+                        return this.entries().length;
+                    }
+                }, {
+                    key: 'entries',
+                    get: function get() {
+                        return Object.keys(this.internals);
                     }
                 }]);
 
@@ -114,7 +283,7 @@
             module.exports = Cache;
 
         }, {}],
-        3: [function(require, module, exports) {
+        4: [function(require, module, exports) {
             'use strict';
 
             var _createClass = function() {
@@ -207,7 +376,7 @@
             exports.ServiceError = ServiceError;
 
         }, {}],
-        4: [function(require, module, exports) {
+        5: [function(require, module, exports) {
             'use strict';
 
             var _createClass = function() {
@@ -254,6 +423,23 @@
                     value: function keys() {
                         return Object.keys(this.base);
                     }
+                }, {
+                    key: 'signature',
+                    value: function signature() {
+                        var length = this.keys().length;
+
+                        var index = 0;
+                        var id = '';
+
+                        for (var key in this.base) {
+                            id += index === 0 ? '' : '&';
+                            id += key + '=' + this.base[key];
+                            index++;
+                        }
+
+                        id += '@' + this.id.replace(/-/g, '') + '#' + length;
+                        return id;
+                    }
                 }]);
 
                 return Pattern;
@@ -262,10 +448,10 @@
             module.exports = Pattern;
 
         }, {
-            "./utils/equal": 6,
-            "./utils/uuid": 10
+            "./utils/equal": 8,
+            "./utils/uuid": 12
         }],
-        5: [function(require, module, exports) {
+        6: [function(require, module, exports) {
             'use strict';
 
             var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function(obj) {
@@ -299,8 +485,9 @@
 
             var uuid = require('./utils/uuid');
             var noop = require('./utils/noop');
+            var debug = require('./utils/debug');
             var str = require('./utils/stringify');
-            var ERR = require('./utils/errors');
+            var Errors = require('./utils/errors');
             var Cache = require('./Cache');
             var Pattern = require('./Pattern');
 
@@ -310,8 +497,10 @@
 
                     this.options = options || {};
                     this.id = options.identifier || uuid();
+                    this.debug = noop;
 
                     this._internalId = Math.random().toString(36).slice(-12);
+                    this._history = new Cache();
                     this._cache = new Cache();
                     this._delegates = [];
                     this._handlers = [];
@@ -325,15 +514,23 @@
                                 this.options[key] = options[key];
                             }
                         }
+
+                        this._postConfigHook();
+                    }
+                }, {
+                    key: 'set',
+                    value: function set(key, value) {
+                        this.options[key] = value;
+                        this._postConfigHook();
                     }
                 }, {
                     key: 'register',
                     value: function register(ressource, handler) {
                         var self = this;
-                        console.debug('Registring new handler for %s', str(ressource));
+                        this.debug('Registring new handler for %s', str(ressource));
 
                         if ((typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource)) !== 'object') {
-                            throw new ERR.RegisterError('Endpoint target must be an object and not %s', typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource));
+                            throw new Errors.RegisterError('Endpoint target must be an object and not type ' + (typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource)));
                         }
 
                         var index = this._handlers.push({
@@ -342,8 +539,8 @@
                             service: self._internalId
                         });
 
-                        index -= 1;
-                        this._cache.set(this._handlers[index].pattern.id, this._handlers[index]);
+                        var registry = this._handlers[index - 1];
+                        this._cache.set(registry.pattern.signature(), registry);
                     }
                 }, {
                     key: 'act',
@@ -354,14 +551,20 @@
                         resolver = typeof resolver === 'function' ? resolver : noop;
 
                         if (!target) {
-                            throw new ERR.ActError('No target defined to act event');
+                            throw new Errors.ActError('No target defined to act event on');
                         }
 
-                        console.debug('%s for %s with data %s', data.__delegate__ ? 'Delegating Action' : 'Acting', str(target), str(data));
+                        this.debug('%s for %s with data %s', data.__delegate__ ? 'Delegating Action' : 'Acting', str(target), str(data));
+                        this._history.set(new Pattern(target).signature(), {
+                            data: data,
+                            stamp: Date.now(),
+                            target: target,
+                            resolver: resolver
+                        });
 
                         this._delegates.forEach(function(delegation) {
                             if (delegation.pattern.match(target)) {
-                                console.debug('Found delegation for %s', str(target));
+                                self.debug('Found delegation for %s', str(target));
                                 delegation.delegate.apply(null, [function(bubbler, delegationData) {
                                     if ((typeof delegationData === 'undefined' ? 'undefined' : _typeof(delegationData)) !== 'object') {
                                         delegationData = data;
@@ -369,7 +572,7 @@
                                         delegationData.origin = data;
                                     }
 
-                                    console.debug('Delegate target %s to %s', str(target), str(bubbler));
+                                    self.debug('Delegate target %s to %s', str(target), str(bubbler));
                                     delegationData.__delegate__ = target;
                                     self.act(bubbler, delegationData, resolver);
                                 }]);
@@ -378,8 +581,9 @@
 
                         this._handlers.forEach(function(factory) {
                             if (factory.pattern.match(target)) {
-                                factory.handler.apply(null, [data, function(err, result) {
-                                    return resolver.apply(null, [err, result, function(delegate, delegationData) {
+                                factory.handler.apply(null, [data, function(Errors, result) {
+                                    self.debug('Handling factory %s with data %s', str(target), str(data));
+                                    return resolver.apply(null, [Errors, result, function(delegate, delegationData) {
                                         if ((typeof delegationData === 'undefined' ? 'undefined' : _typeof(delegationData)) !== 'object') {
                                             delegationData = {};
                                         }
@@ -396,14 +600,14 @@
                     key: 'delegate',
                     value: function delegate(ressource, delegation) {
                         var self = this;
-                        console.debug('Registering delegate for %s', str(ressource));
+                        this.debug('Registering delegate for %s', str(ressource));
 
                         if ((typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource)) !== 'object') {
-                            throw new ERR.DelegationError('Delegation ressource must be an object and not %s', typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource));
+                            throw new Errors.DelegationError('Delegation ressource must be an object and not ' + (typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource)));
                         }
 
                         if (typeof delegation !== 'function') {
-                            throw new ERR.DelegationError('Delegators need a function to delegate, received %s', typeof delegation === 'undefined' ? 'undefined' : _typeof(delegation));
+                            throw new Errors.DelegationError('Delegators need a function to delegate, received ' + (typeof delegation === 'undefined' ? 'undefined' : _typeof(delegation)));
                         }
 
                         var index = this._delegates.push({
@@ -412,8 +616,13 @@
                             service: self._internalId
                         });
 
-                        index -= 1;
-                        this._cache.set(this._delegates[index].pattern.id, this._delegates[index]);
+                        var registry = this._delegates[index - 1];
+                        this._cache.set(registry.pattern.signature(), registry);
+                    }
+                }, {
+                    key: '_postConfigHook',
+                    value: function _postConfigHook() {
+                        this.debug = debug(this.options.debug);
                     }
                 }]);
 
@@ -423,14 +632,48 @@
             module.exports = Service;
 
         }, {
-            "./Cache": 2,
-            "./Pattern": 4,
-            "./utils/errors": 7,
-            "./utils/noop": 8,
-            "./utils/stringify": 9,
-            "./utils/uuid": 10
+            "./Cache": 3,
+            "./Pattern": 5,
+            "./utils/debug": 7,
+            "./utils/errors": 9,
+            "./utils/noop": 10,
+            "./utils/stringify": 11,
+            "./utils/uuid": 12
         }],
-        6: [function(require, module, exports) {
+        7: [function(require, module, exports) {
+            (function(process) {
+                'use strict';
+
+                var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function(obj) {
+                    return typeof obj;
+                } : function(obj) {
+                    return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj;
+                };
+
+                var noop = require('./noop');
+
+                module.exports = function(enabled) {
+                    if (enabled) {
+                        if ((typeof console === 'undefined' ? 'undefined' : _typeof(console)) !== undefined) {
+                            if (typeof console.debug === 'function') {
+                                return console.debug.bind(console);
+                            } else if (typeof console.log === 'function') {
+                                return console.log.bind(console);
+                            } else if (process && typeof process.stdout.write === 'function') {
+                                return process.stdout.write.bind(process);
+                            }
+                        }
+                    }
+
+                    return noop;
+                };
+
+            }).call(this, require('_process'))
+        }, {
+            "./noop": 10,
+            "_process": 2
+        }],
+        8: [function(require, module, exports) {
             'use strict';
 
             module.exports = function deepEqual(o, p, loose) {
@@ -503,7 +746,7 @@
             };
 
         }, {}],
-        7: [function(require, module, exports) {
+        9: [function(require, module, exports) {
             'use strict';
 
             function _classCallCheck(instance, Constructor) {
@@ -544,7 +787,8 @@
 
                     var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(DelegationError).call(this, message));
 
-                    _this.setCallee('Service.delegate');
+                    _this.name = 'DelegationError';
+                    _this.callee = 'Service.delegate';
                     return _this;
                 }
 
@@ -559,7 +803,8 @@
 
                     var _this2 = _possibleConstructorReturn(this, Object.getPrototypeOf(ActError).call(this, message));
 
-                    _this2.setCallee('Service.act');
+                    _this2.name = 'ActError';
+                    _this2.callee = 'Service.act';
                     return _this2;
                 }
 
@@ -574,7 +819,8 @@
 
                     var _this3 = _possibleConstructorReturn(this, Object.getPrototypeOf(RegisterError).call(this, message));
 
-                    _this3.setCallee('Service.register');
+                    _this3.name = 'RegisterError';
+                    _this3.callee = 'Service.register';
                     return _this3;
                 }
 
@@ -586,15 +832,15 @@
             exports.RegisterError = RegisterError;
 
         }, {
-            "../Error": 3
+            "../Error": 4
         }],
-        8: [function(require, module, exports) {
+        10: [function(require, module, exports) {
             "use strict";
 
             module.exports = function() { /* non operational method */ };
 
         }, {}],
-        9: [function(require, module, exports) {
+        11: [function(require, module, exports) {
             'use strict';
 
             module.exports = function(input) {
@@ -610,7 +856,7 @@
             };
 
         }, {}],
-        10: [function(require, module, exports) {
+        12: [function(require, module, exports) {
             'use strict';
 
             var guidBlock = function guidBlock() {
