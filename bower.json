@@ -1,6 +1,6 @@
 {
   "name": "vanage",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "description": "Handling events in the microservice way without any dependencies, for your Browser and Node.js",
   "main": "dist/vanage.js",
   "authors": [
@@ -8,11 +8,18 @@
   ],
   "license": "Apache-2.0",
   "keywords": [
-    "microservice",
-    "flux",
     "events",
-    "handling",
-    "delegate"
+    "flux",
+    "redux",
+    "microservice",
+    "dispatch",
+    "delegate",
+    "event delegation",
+    "handler",
+    "manager",
+    "listener",
+    "actor",
+    "vanage"
   ],
   "homepage": "https://github.com/janbiasi/vanage",
   "ignore": [

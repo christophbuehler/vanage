@@ -7,6 +7,11 @@
     "coverage": "./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha -- test/index.js test -R spec",
     "test": "./node_modules/.bin/_mocha ./test/index.js"
   },
+  "keywords": [
+    "events", "flux", "redux", "microservice", "dispatch", 
+    "delegate", "event delegation", "handler",
+    "manager", "listener", "actor", "vanage"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/janbiasi/vanage.git"
