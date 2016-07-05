@@ -1,12 +1,12 @@
 <html>
 <head>
-    <script src="../dist/service.js"></script>
+    <script src="../dist/vanage.min.js"></script>
 </head>
 <body>
     <script>
-        Service.set('debug', true);
+        Vanage.set('debug', true);
         
-        Service.register({
+        Vanage.register({
             module: 'error'
         }, (args, done) => {
             if(args.error) {
@@ -16,7 +16,7 @@
             }
         });
         
-        Service.register({
+        Vanage.register({
             module: 'appcache',
             event: 'ready'
         }, (args, done) => {
@@ -27,14 +27,14 @@
             }
         });
 
-        Service.delegate({
+        Vanage.delegate({
             module: 'appcache',
             event: 'error'
         }, (delegate, data) => {
             delegate({ module: 'error' }, data);
         });
 
-        Service.act({
+        Vanage.act({
             module: 'appcache',
             event: 'ready'
         }, {
@@ -57,9 +57,9 @@
             }
         });
 
-        Service.register('invalid', () => {});
+        Vanage.register('invalid', () => {});
 
-        console.log(Service)
+        console.log(Vanage)
 
     </script>
 </body>
