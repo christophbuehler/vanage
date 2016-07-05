@@ -1,0 +1,26 @@
+{
+  "name": "vanage",
+  "description": "",
+  "main": "dist/vanage.js",
+  "authors": [
+    "Jan Biasi"
+  ],
+  "license": "Apache-2.0",
+  "keywords": [
+    "microservice",
+    "flux",
+    "events",
+    "handling",
+    "delegate"
+  ],
+  "homepage": "https://github.com/janbiasi/mservices",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "src",
+    "gulpfile.js",
+    "index.js"
+  ]
+}
