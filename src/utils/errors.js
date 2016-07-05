@@ -6,7 +6,8 @@ class DelegationError extends ExtendableServiceError {
     constructor(message) {
         super(message);
 
-        this.setCallee('Service.delegate');
+        this.name = 'DelegationError';
+        this.callee = 'Service.delegate';
     }
 }
 
@@ -14,7 +15,8 @@ class ActError extends ExtendableServiceError {
     constructor(message) {
         super(message);
 
-        this.setCallee('Service.act');
+        this.name = 'ActError';
+        this.callee = 'Service.act';
     }
 }
 
@@ -22,7 +24,8 @@ class RegisterError extends ExtendableServiceError {
     constructor(message) {
         super(message);
 
-        this.setCallee('Service.register');
+        this.name = 'RegisterError';
+        this.callee = 'Service.register';
     }
 }
 
