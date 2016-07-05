@@ -13,7 +13,6 @@ addons:
 cache:
     directories:
         - node_modules
-        - typings
         - .github
 install:
     - npm install
