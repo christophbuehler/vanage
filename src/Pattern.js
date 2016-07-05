@@ -1,7 +1,7 @@
 'use strict';
 
-const equals = require('../equal');
-const uuid = require('../uuid');
+const equals = require('./utils/equal');
+const uuid = require('./utils/uuid');
 
 class Pattern {
     constructor(identifier) {
