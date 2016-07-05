@@ -1,0 +1,26 @@
+engines:
+    rubocop:
+        enabled: true
+    golint:
+        enabled: true
+    gofmt:
+        enabled: true
+    eslint:
+        enabled: true
+        checks:
+            complexity:
+                enabled: false
+            no-void:
+                enabled: false
+
+ratings:
+    paths:
+        - src/**
+        - dist/**
+        - "**.js"
+
+exclude_paths:
+    - "node_modules/**"
+    - "test/**"
+    - "gulpfile.js"
+    - "index.js"

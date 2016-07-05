@@ -1,0 +1,27 @@
+sudo: required
+language: node_js
+node_js:
+    - "4.0"
+env:
+    - CXX=g++-4.8
+addons:
+    apt:
+        sources:
+            - ubuntu-toolchain-r-test
+        packages:
+            - g++-4.8
+cache:
+    directories:
+        - node_modules
+        - typings
+        - .github
+install:
+    - npm install
+    - npm install -g gulp
+    - npm install -g istanbul
+    - npm install -g mocha
+    - npm install -g codeclimate-test-reporter
+script:
+    - npm run coverage
+after_script:
+    - codeclimate-test-reporter < ./coverage/lcov.info
