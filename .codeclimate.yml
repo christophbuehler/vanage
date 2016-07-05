@@ -15,9 +15,7 @@ engines:
 
 ratings:
     paths:
-        - src/**
-        - dist/**
-        - "**.js"
+        - dist/vanage.js
 
 exclude_paths:
     - "node_modules/**"
