@@ -4,6 +4,8 @@
 </head>
 <body>
     <script>
+        Service.set('debug', true);
+        
         Service.register({
             module: 'error'
         }, (args, done) => {
@@ -54,6 +56,8 @@
                 window.location.reload();
             }
         });
+
+        Service.register('invalid', () => {});
 
         console.log(Service)
 
