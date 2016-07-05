@@ -2,21 +2,20 @@
 
 const pkg = require('./package.json');
 const gulp = require('gulp');
-const sourcemaps = require('gulp-sourcemaps');
-const uglify = require('gulp-uglify');
-const beautify = require('gulp-jsbeautifier');
 const source = require('vinyl-source-stream');
 const buffer = require('vinyl-buffer');
 const browserify = require('browserify');
 const watchify = require('watchify');
 const babel = require('babelify');
+const plugins = require('gulp-load-plugins')();
+
 const env = process.env.NODE_ENV + '';
 
 const compile = watch => {
     const bundler = watchify(
         browserify({
             entries: [pkg.main],
-            standalone: 'Service',
+            standalone: 'Vanage',
             extensions: ['js']
         }).transform(babel.configure({
             presets: ['es2015']
@@ -28,14 +27,13 @@ const compile = watch => {
             .on('error', err => { 
                 console.error(`Bundling failed: ${err.message}`);
             })
-            .pipe(source('service.js'))
+            .pipe(source('vanage.js'))
             .pipe(buffer())
-            .pipe(sourcemaps.init({
+            .pipe(plugins.sourcemaps.init({
                 loadMaps: true
             }))
-            //.pipe(uglify())
-            .pipe(beautify())
-            .pipe(sourcemaps.write('.'))
+            .pipe(plugins.jsbeautifier())
+            .pipe(plugins.sourcemaps.write('.'))
             .pipe(gulp.dest('./dist'));
     }
 
@@ -56,4 +54,16 @@ const watch = () => {
 gulp.task('build', () => { return compile(); });
 gulp.task('watch', () => { return watch(); });
 
-gulp.task('default', ['watch']);
+gulp.task('compress', ['build'], () => {
+    return gulp.src('./dist/vanage.js')
+        .pipe(plugins.sourcemaps.init({
+                loadMaps: true
+        }))
+        .pipe(plugins.uglify())
+        .pipe(plugins.rename('vanage.min.js'))
+        .pipe(plugins.sourcemaps.write('.'))
+        .pipe(gulp.dest('./dist'));
+});
+
+gulp.task('default', ['compress']);
+gulp.task('develop', ['build', 'watch']);
