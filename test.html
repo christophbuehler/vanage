@@ -5,14 +5,31 @@
 <body>
     <script>
         Service.register({
+            module: 'error'
+        }, (args, done) => {
+            if(args.error) {
+                done(new Error(args.error));
+            } else {
+                done(null);
+            }
+        });
+        
+        Service.register({
             module: 'appcache',
             event: 'ready'
         }, (args, done) => {
             if(args.state === 3) { // updateready
                 done(null, window.applicationCache);
             } else {
-                done(new Error('Appcache status is not updateready!'));
+                done(('Appcache status is not updateready!'));
             }
+        });
+
+        Service.delegate({
+            module: 'appcache',
+            event: 'error'
+        }, (delegate, data) => {
+            delegate({ module: 'error' }, data);
         });
 
         Service.act({
@@ -20,9 +37,15 @@
             event: 'ready'
         }, {
             state: window.applicationCache.UPDATEREADY
-        }, (err, result) => {
+        }, (err, result, delegate) => {
             if(err) {
-                console.error(err.message);
+                delegate({
+                    module: 'appcache',
+                    event: 'error'
+                }, {
+                    error: err
+                });
+
                 return false;
             }
 
@@ -30,16 +53,6 @@
                 result.swap();
                 window.location.reload();
             }
-        });
-
-        Service.delegate({
-            module: 'appcache',
-            event: 'ready'
-        }, (err, result, delegate) => {
-            delegate({
-                module: 'appcache',
-                event: err ? 'error' : 'swap'
-            }, result);
         });
 
         console.log(Service)
