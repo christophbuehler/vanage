@@ -1,7 +1,7 @@
 {
   "name": "vanage",
-  "version": "1.0.0",
-  "description": "",
+  "version": "1.0.1",
+  "description": "Handling events in the microservice way without any dependencies, for your Browser and Node.js",
   "main": "index.js",
   "scripts": {
     "coverage": "./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha -- test/index.js test -R spec",
@@ -9,14 +9,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/janbiasi/mservices.git"
+    "url": "git+https://github.com/janbiasi/vanage.git"
   },
   "author": "Jan Biasi",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/janbiasi/mservices/issues"
+    "url": "https://github.com/janbiasi/vanage/issues"
   },
-  "homepage": "https://github.com/janbiasi/mservices#readme",
+  "homepage": "https://github.com/janbiasi/vanage#readme",
   "devDependencies": {
     "babel-preset-es2015": "^6.9.0",
     "babelify": "^7.3.0",
@@ -31,11 +31,14 @@
     "gulp-jsbeautifier": "^2.0.3",
     "gulp-load-plugins": "^1.2.4",
     "gulp-plumber": "^1.1.0",
+    "gulp-release": "^1.0.6",
+    "gulp-release-tasks": "0.0.3",
     "gulp-rename": "^1.2.2",
     "gulp-sourcemaps": "^1.6.0",
     "gulp-uglify": "^1.5.4",
     "istanbul": "^0.4.4",
     "mocha": "^2.5.3",
+    "tasks": "0.0.3",
     "vinyl-buffer": "^1.0.0",
     "vinyl-source-stream": "^1.1.0",
     "watchify": "^3.7.0"

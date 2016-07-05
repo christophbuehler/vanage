@@ -1,6 +1,7 @@
 {
   "name": "vanage",
-  "description": "",
+  "version": "1.0.3",
+  "description": "Handling events in the microservice way without any dependencies, for your Browser and Node.js",
   "main": "dist/vanage.js",
   "authors": [
     "Jan Biasi"
@@ -13,7 +14,7 @@
     "handling",
     "delegate"
   ],
-  "homepage": "https://github.com/janbiasi/mservices",
+  "homepage": "https://github.com/janbiasi/vanage",
   "ignore": [
     "**/.*",
     "node_modules",

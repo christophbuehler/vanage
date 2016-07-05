@@ -9,6 +9,8 @@ const watchify = require('watchify');
 const babel = require('babelify');
 const plugins = require('gulp-load-plugins')();
 
+require('gulp-release-tasks')(gulp);
+
 const env = process.env.NODE_ENV + '';
 
 const compile = watch => {
