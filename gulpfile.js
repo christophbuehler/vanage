@@ -59,7 +59,15 @@ gulp.task('compress', ['build'], () => {
         .pipe(plugins.sourcemaps.init({
                 loadMaps: true
         }))
-        .pipe(plugins.uglify())
+        .pipe(plugins.uglify({
+            preserveComments: 'license',
+            mangle: [
+                'Service',
+                'Pattern',
+                'Cache',
+                'Vanage'
+            ]
+        }))
         .pipe(plugins.rename('vanage.min.js'))
         .pipe(plugins.sourcemaps.write('.'))
         .pipe(gulp.dest('./dist'));
