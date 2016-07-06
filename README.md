@@ -135,6 +135,8 @@ Manager.act({
 
 ##### dump
 
+##### isDirty
+
 
 ### Pattern
 
