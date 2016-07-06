@@ -1,7 +1,8 @@
 [
     'ActError',
     'DelegationError',
-    'RegisterError'
+    'RegisterError',
+    'ServiceError'
 ].forEach(function(file) {
     require('./' + file + 'Test.js');
 });
