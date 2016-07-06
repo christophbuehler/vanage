@@ -1,12 +1,15 @@
 'use strict';
 
+const Signature = require('./Signature');
 const equals = require('./utils/equal');
 const uuid = require('./utils/uuid');
 
 class Pattern {
     constructor(identifier) {
+        this.name = 'Vanage.Pattern';
         this.base = identifier;
         this.id = uuid();
+        this.signature = new Signature(this.id, this.base).value;
     }
 
     get keys() {
@@ -15,22 +18,6 @@ class Pattern {
 
     match(foreign) {
         return equals(this.base, foreign);
-    }
-
-    signature() {
-        const length = this.keys.length;
-
-        let index = 0;
-        let id = '';
-
-        for(let key in this.base) {
-            id += index === 0 ? '' : '&'; 
-            id += `${key}=${this.base[key]}`;
-            index++;
-        }
-
-        id += `@${this.id.replace(/-/g, '')}#${length}`;
-        return id;
     }
 }
 

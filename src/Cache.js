@@ -2,6 +2,7 @@
 
 class Cache {
     constructor() {
+        this.name = 'Vanage.Cache';
         this.internals = {};
         this.dirty = false;
     }

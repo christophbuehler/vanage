@@ -10,6 +10,7 @@ const Pattern = require('./Pattern');
 
 class Service {
     constructor(options) {
+        this.name = 'Vanage.Service';
         this.options = options || {};
         this.id = options.identifier || uuid();
         this.debug = noop;
@@ -51,7 +52,7 @@ class Service {
         });
 
         const registry = this._handlers[index - 1];
-        this._cache.set(registry.pattern.signature(), registry);
+        this._cache.set(registry.pattern.signature, registry);
     }
 
     act(target, data, resolver) {
@@ -65,7 +66,7 @@ class Service {
         }
 
         this.debug('%s for %s with data %s', data.__delegate__ ? 'Delegating Action' : 'Acting', str(target), str(data));
-        this._history.set(new Pattern(target).signature(), {
+        this._history.set(new Pattern(target).signature, {
             data: data,
             stamp: Date.now(),
             target: target,
@@ -126,7 +127,7 @@ class Service {
         });
 
         const registry = this._delegates[index - 1];
-        this._cache.set(registry.pattern.signature(), registry);
+        this._cache.set(registry.pattern.signature, registry);
     }
 
     _postConfigHook() {

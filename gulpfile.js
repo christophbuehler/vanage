@@ -63,6 +63,9 @@ gulp.task('compress', ['build'], () => {
         }))
         .pipe(plugins.uglify({
             preserveComments: 'license',
+            compress: {
+                keep_fnames: true
+            },
             mangle: [
                 'Service',
                 'Pattern',

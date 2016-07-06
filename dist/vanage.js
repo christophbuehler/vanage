@@ -67,7 +67,7 @@
         }, {
             "./src/Cache": 3,
             "./src/Service": 6,
-            "./src/utils/uuid": 14
+            "./src/utils/uuid": 15
         }],
         2: [function(require, module, exports) {
             // shim for using process in browser
@@ -225,6 +225,7 @@
                 function Cache() {
                     _classCallCheck(this, Cache);
 
+                    this.name = 'Vanage.Cache';
                     this.internals = {};
                     this.dirty = false;
                 }
@@ -392,6 +393,7 @@
                 }
             }
 
+            var Signature = require('./Signature');
             var equals = require('./utils/equal');
             var uuid = require('./utils/uuid');
 
@@ -399,31 +401,16 @@
                 function Pattern(identifier) {
                     _classCallCheck(this, Pattern);
 
+                    this.name = 'Vanage.Pattern';
                     this.base = identifier;
                     this.id = uuid();
+                    this.signature = new Signature(this.id, this.base).value;
                 }
 
                 _createClass(Pattern, [{
                     key: 'match',
                     value: function match(foreign) {
                         return equals(this.base, foreign);
-                    }
-                }, {
-                    key: 'signature',
-                    value: function signature() {
-                        var length = this.keys.length;
-
-                        var index = 0;
-                        var id = '';
-
-                        for (var key in this.base) {
-                            id += index === 0 ? '' : '&';
-                            id += key + '=' + this.base[key];
-                            index++;
-                        }
-
-                        id += '@' + this.id.replace(/-/g, '') + '#' + length;
-                        return id;
                     }
                 }, {
                     key: 'keys',
@@ -438,8 +425,9 @@
             module.exports = Pattern;
 
         }, {
-            "./utils/equal": 8,
-            "./utils/uuid": 14
+            "./Signature": 7,
+            "./utils/equal": 9,
+            "./utils/uuid": 15
         }],
         6: [function(require, module, exports) {
             'use strict';
@@ -485,6 +473,7 @@
                 function Service(options) {
                     _classCallCheck(this, Service);
 
+                    this.name = 'Vanage.Service';
                     this.options = options || {};
                     this.id = options.identifier || uuid();
                     this.debug = noop;
@@ -530,7 +519,7 @@
                         });
 
                         var registry = this._handlers[index - 1];
-                        this._cache.set(registry.pattern.signature(), registry);
+                        this._cache.set(registry.pattern.signature, registry);
                     }
                 }, {
                     key: 'act',
@@ -545,7 +534,7 @@
                         }
 
                         this.debug('%s for %s with data %s', data.__delegate__ ? 'Delegating Action' : 'Acting', str(target), str(data));
-                        this._history.set(new Pattern(target).signature(), {
+                        this._history.set(new Pattern(target).signature, {
                             data: data,
                             stamp: Date.now(),
                             target: target,
@@ -607,7 +596,7 @@
                         });
 
                         var registry = this._delegates[index - 1];
-                        this._cache.set(registry.pattern.signature(), registry);
+                        this._cache.set(registry.pattern.signature, registry);
                     }
                 }, {
                     key: '_postConfigHook',
@@ -624,13 +613,108 @@
         }, {
             "./Cache": 3,
             "./Pattern": 5,
-            "./utils/debug": 7,
-            "./utils/errors": 9,
-            "./utils/noop": 12,
-            "./utils/stringify": 13,
-            "./utils/uuid": 14
+            "./utils/debug": 8,
+            "./utils/errors": 10,
+            "./utils/noop": 13,
+            "./utils/stringify": 14,
+            "./utils/uuid": 15
         }],
         7: [function(require, module, exports) {
+            'use strict';
+
+            var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function(obj) {
+                return typeof obj;
+            } : function(obj) {
+                return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj;
+            };
+
+            var _createClass = function() {
+                function defineProperties(target, props) {
+                    for (var i = 0; i < props.length; i++) {
+                        var descriptor = props[i];
+                        descriptor.enumerable = descriptor.enumerable || false;
+                        descriptor.configurable = true;
+                        if ("value" in descriptor) descriptor.writable = true;
+                        Object.defineProperty(target, descriptor.key, descriptor);
+                    }
+                }
+                return function(Constructor, protoProps, staticProps) {
+                    if (protoProps) defineProperties(Constructor.prototype, protoProps);
+                    if (staticProps) defineProperties(Constructor, staticProps);
+                    return Constructor;
+                };
+            }();
+
+            function _classCallCheck(instance, Constructor) {
+                if (!(instance instanceof Constructor)) {
+                    throw new TypeError("Cannot call a class as a function");
+                }
+            }
+
+            var uuid = require('./utils/uuid');
+
+            var Signature = function() {
+                function Signature(id, factory) {
+                    _classCallCheck(this, Signature);
+
+                    this.identifier = factory || {};
+                    this.unique = id || uuid();
+                }
+
+                _createClass(Signature, [{
+                    key: '_stringifyObjectLike',
+                    value: function _stringifyObjectLike(obj) {
+                        var self = this;
+
+                        if (Array.isArray(obj)) {
+                            return obj.join(',');
+                        } else if (typeof obj === 'string') {
+                            return obj;
+                        } else if ((typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object') {
+                            var id = '';
+                            var index = 0;
+
+                            for (var key in obj) {
+                                if (!Array.isArray(obj[key]) && _typeof(obj[key]) === 'object') {
+                                    id += self._stringifyObjectLike(obj[key]);
+                                }
+
+                                id += index === 0 ? '' : '&';
+                                id += key + ':' + obj[key];
+                                index++;
+                            }
+
+                            return id;
+                        }
+
+                        return JSON.stringify(obj);
+                    }
+                }, {
+                    key: 'value',
+                    get: function get() {
+                        var length = this.identifierKeys.length;
+
+                        var id = this._stringifyObjectLike(this.identifier);
+                        id += '@' + this.unique.replace(/-/g, '') + '#' + length;
+
+                        return id;
+                    }
+                }, {
+                    key: 'identifierKeys',
+                    get: function get() {
+                        return Object.keys(this.identifier);
+                    }
+                }]);
+
+                return Signature;
+            }();
+
+            module.exports = Signature;
+
+        }, {
+            "./utils/uuid": 15
+        }],
+        8: [function(require, module, exports) {
             (function(process) {
                 'use strict';
 
@@ -660,10 +744,10 @@
 
             }).call(this, require('_process'))
         }, {
-            "./noop": 12,
+            "./noop": 13,
             "_process": 2
         }],
-        8: [function(require, module, exports) {
+        9: [function(require, module, exports) {
             'use strict';
 
             var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function(obj) {
@@ -798,10 +882,10 @@
             }
 
         }, {
-            "./isArguments": 10,
-            "./keys": 11
+            "./isArguments": 11,
+            "./keys": 12
         }],
-        9: [function(require, module, exports) {
+        10: [function(require, module, exports) {
             'use strict';
 
             function _classCallCheck(instance, Constructor) {
@@ -889,7 +973,7 @@
         }, {
             "../Error": 4
         }],
-        10: [function(require, module, exports) {
+        11: [function(require, module, exports) {
             'use strict';
 
             var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function(obj) {
@@ -917,7 +1001,7 @@
             };
 
         }, {}],
-        11: [function(require, module, exports) {
+        12: [function(require, module, exports) {
             'use strict';
 
             exports = module.exports = function(undefined) {
@@ -941,13 +1025,13 @@
             }
 
         }, {}],
-        12: [function(require, module, exports) {
+        13: [function(require, module, exports) {
             "use strict";
 
             module.exports = function() { /* non operational method */ };
 
         }, {}],
-        13: [function(require, module, exports) {
+        14: [function(require, module, exports) {
             'use strict';
 
             module.exports = function(input) {
@@ -963,7 +1047,7 @@
             };
 
         }, {}],
-        14: [function(require, module, exports) {
+        15: [function(require, module, exports) {
             'use strict';
 
             var guidBlock = function guidBlock() {
