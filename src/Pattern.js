@@ -9,16 +9,16 @@ class Pattern {
         this.id = uuid();
     }
 
+    get keys() {
+        return Object.keys(this.base);
+    }
+
     match(foreign) {
         return equals(this.base, foreign);
     }
 
-    keys() {
-        return Object.keys(this.base);
-    }
-
     signature() {
-        const length = this.keys().length;
+        const length = this.keys.length;
 
         let index = 0;
         let id = '';

@@ -7,7 +7,7 @@ class Cache {
     }
 
     get size() {
-        return this.entries().length;
+        return this.entries.length;
     }
 
     get entries() {
