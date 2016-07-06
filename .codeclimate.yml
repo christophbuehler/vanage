@@ -15,10 +15,11 @@ engines:
 
 ratings:
     paths:
-        - dist/vanage.js
+        - src/**
 
 exclude_paths:
     - "node_modules/**"
     - "test/**"
+    - "dist/**"
     - "gulpfile.js"
     - "index.js"
