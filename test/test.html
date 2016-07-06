@@ -1,12 +1,13 @@
 <html>
 <head>
-    <script src="../dist/vanage.min.js"></script>
+    <script src="../dist/manager.min.js"></script>
 </head>
 <body>
     <script>
-        Vanage.set('debug', true);
+        var manager = Vanage.create();
+        manager.set('debug', true);
         
-        Vanage.register({
+        manager.register({
             module: 'error'
         }, (args, done) => {
             if(args.error) {
@@ -17,7 +18,7 @@
             }
         });
         
-        Vanage.register({
+        manager.register({
             module: 'appcache',
             event: 'ready'
         }, (args, done) => {
@@ -28,14 +29,14 @@
             }
         });
 
-        Vanage.delegate({
+        manager.delegate({
             module: 'appcache',
             event: 'error'
         }, (delegate, data) => {
             delegate({ module: 'error' }, data);
         });
 
-        Vanage.act({
+        manager.act({
             module: 'appcache',
             event: 'ready'
         }, {
