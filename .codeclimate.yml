@@ -14,6 +14,8 @@ engines:
                 enabled: false
             indent:
                 enabled: false
+            no-plusplus:
+                enabled: false
 
 ratings:
     paths:
