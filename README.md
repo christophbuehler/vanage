@@ -19,10 +19,10 @@ bower install --save vanage
 
 | Chrome | Firefox | Opera | Safari | Node.js | io.js |
 |--------|---------|-------|--------|---------|-------|
-| 5+     | 4.0+ (2.0) | 12 | 5      | 4+ (ES6 strict) | 0.10 | 
+| 5+     | 4.0+    | 12+   | 5+     | 4+      | *Not tested* | 
 
 If you want to use it in a browser which isn't supported by the module itself, you can 
-add the polyfill from [polyfill.io](https://cnd.polyfill.io/v2/docs) with the snippet below.
+add the polyfill from [polyfill.io](https://cdn.polyfill.io/v2/docs) with the small HTML snippet below.
 
 ```html
 <!doctype html>
@@ -37,6 +37,43 @@ add the polyfill from [polyfill.io](https://cnd.polyfill.io/v2/docs) with the sn
 </html>
 ``` 
 
+### Usage
+
+```js
+const Manager = Vanage.create({
+    debug: true
+});
+
+Manager.register({
+    role: 'user',
+    action: 'create'
+}, (args, done) => {
+    if(args.permission = 'allowed') {
+        /* do some stuff with args.data ... */
+        return done();
+    }
+
+    done(new Error('Access denied'));
+});
+
+
+let permission = $.get('/api/v1/getPermission');
+
+Manager.act({
+    role: 'user',
+    action: 'create'
+}, {
+    permission: await permission,
+    data: { /* user data */ }
+}, err => {
+    if(err) {
+        alert(err.message);
+        return false;
+    }
+
+    alert('User created!');
+});
+```
 
 ### License
 [Apache 2.0 - OpenSource](LICENSE)
