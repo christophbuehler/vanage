@@ -39,6 +39,8 @@ add the polyfill from [polyfill.io](https://cdn.polyfill.io/v2/docs) with the sm
 
 ### Usage
 
+> You can **try vanage** in your browser with a live example with [Tonic Dev](https://tonicdev.com/janbiasi/vanage-example)
+
 ```js
 const Manager = Vanage.create({
     debug: true
