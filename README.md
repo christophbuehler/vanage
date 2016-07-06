@@ -36,3 +36,7 @@ add the polyfill from [polyfill.io](https://cnd.polyfill.io/v2/docs) with the sn
 </body>
 </html>
 ``` 
+
+
+### License
+[Apache 2.0 - OpenSource](LICENSE)
