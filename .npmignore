@@ -1,6 +1,9 @@
 test
 node_modules
-dist
+
+# keep dist folder for client and server usage
+# dist
+
 .codeclimate.yml
 .travis.yml
 bower.json
