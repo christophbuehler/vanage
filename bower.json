@@ -1,6 +1,6 @@
 {
   "name": "vanage",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "description": "Handling events in the microservice way without any dependencies, for your Browser and Node.js",
   "main": "dist/vanage.js",
   "authors": [
