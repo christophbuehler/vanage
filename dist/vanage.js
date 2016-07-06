@@ -53,7 +53,6 @@
             module.exports = function(undefined) {
                 return {
                     Cache: Cache,
-                    Error: Error,
                     Service: Service,
                     create: function create(settings) {
                         settings = settings || {

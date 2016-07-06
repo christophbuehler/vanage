@@ -4,7 +4,7 @@
 
 Handling events in the microservice way without any dependencies, for your Browser and Node.js
 
-### Installation
+## Installation
 
 You can install this package via bower if you're using it in your client or via NPM to use it 
 on your server-side. If you're planning to use it on your server and the client install the module 
@@ -15,11 +15,13 @@ npm install --save vanage
 bower install --save vanage
 ```
 
-##### Compatibility
+#### Compatibility
 
 | Chrome | Firefox | Opera | Safari | Node.js | io.js |
 |--------|---------|-------|--------|---------|-------|
-| 5+     | 4.0+    | 12+   | 5+     | 4+      | *Not tested* | 
+| 5+     | 4.0+    | 12+   | 5+     | 4       | *-'** |
+
+* *-* = not tested yet 
 
 If you want to use it in a browser which isn't supported by the module itself, you can 
 add the polyfill from [polyfill.io](https://cdn.polyfill.io/v2/docs) with the small HTML snippet below.
@@ -37,7 +39,15 @@ add the polyfill from [polyfill.io](https://cdn.polyfill.io/v2/docs) with the sm
 </html>
 ``` 
 
-### Usage
+## ToDo's
+
+- [ ] Adding the method API to Readme
+- [ ] Create API docs out of the Readme content
+- [ ] Adding async possibility to all methods
+- [ ] Check compatibility with Node.js v5 and v6
+- [ ] Improve code quality and test coverage
+
+## Usage
 
 > You can **try vanage** in your browser with a live example with [Tonic Dev](https://tonicdev.com/janbiasi/vanage-example)
 
@@ -77,5 +87,86 @@ Manager.act({
 });
 ```
 
-### License
+## API
+
+### Vanage
+
+#### Properties
+
+##### Cache
+
+##### Service
+
+#### Methods
+
+##### create
+
+
+### Service
+
+#### Methods
+
+##### register
+
+##### unregister
+
+##### delegate 
+
+##### act 
+
+##### queue
+
+
+### Cache
+
+#### Properties
+
+##### size
+
+##### entries
+
+#### Methods
+
+##### set
+
+##### get
+
+##### flush
+
+##### dump
+
+
+### Pattern
+
+#### Properties
+
+##### id
+
+##### signature
+
+#### Methods
+
+##### match
+
+
+### Signature
+
+#### Properties
+
+##### identifier
+
+##### identifierKeys
+
+##### unique
+
+##### value
+
+#### Methods
+
+##### match
+
+
+
+## License
+
 [Apache 2.0 - OpenSource](LICENSE)
