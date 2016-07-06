@@ -45,39 +45,29 @@
         1: [function(require, module, exports) {
             'use strict';
 
-            var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function(obj) {
-                return typeof obj;
-            } : function(obj) {
-                return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj;
-            };
-
             var uuid = require('./src/utils/uuid');
             var Service = require('./src/Service');
-            var globalIdentifier = uuid();
-            var semanticGlobalIdentifier = globalIdentifier.replace(/-/g, '');
+            var Cache = require('./src/Cache');
 
             module.exports = function(undefined) {
-                function createInitialService() {
-                    return new Service({
-                        identifier: globalIdentifier,
-                        debug: false
-                    });
-                }
+                return {
+                    Cache: Cache,
+                    Service: Service,
+                    create: function create(settings) {
+                        settings = settings || {
+                            debug: false
+                        };
 
-                if ((typeof window === 'undefined' ? 'undefined' : _typeof(window)) !== undefined) {
-                    // Special security setup for browser usage which
-                    // saves the global instance to a guid in the window object
-                    window[semanticGlobalIdentifier] = createInitialService();
-                    return window[semanticGlobalIdentifier];
-                } else {
-                    // Server uses a plain Service instance
-                    return createInitialService();
-                }
+                        return new Service(settings);
+                    },
+                    generateId: uuid
+                };
             }();
 
         }, {
+            "./src/Cache": 3,
             "./src/Service": 6,
-            "./src/utils/uuid": 12
+            "./src/utils/uuid": 14
         }],
         2: [function(require, module, exports) {
             // shim for using process in browser
@@ -268,7 +258,7 @@
                 }, {
                     key: 'size',
                     get: function get() {
-                        return this.entries().length;
+                        return this.entries.length;
                     }
                 }, {
                     key: 'entries',
@@ -419,14 +409,9 @@
                         return equals(this.base, foreign);
                     }
                 }, {
-                    key: 'keys',
-                    value: function keys() {
-                        return Object.keys(this.base);
-                    }
-                }, {
                     key: 'signature',
                     value: function signature() {
-                        var length = this.keys().length;
+                        var length = this.keys.length;
 
                         var index = 0;
                         var id = '';
@@ -440,6 +425,11 @@
                         id += '@' + this.id.replace(/-/g, '') + '#' + length;
                         return id;
                     }
+                }, {
+                    key: 'keys',
+                    get: function get() {
+                        return Object.keys(this.base);
+                    }
                 }]);
 
                 return Pattern;
@@ -449,7 +439,7 @@
 
         }, {
             "./utils/equal": 8,
-            "./utils/uuid": 12
+            "./utils/uuid": 14
         }],
         6: [function(require, module, exports) {
             'use strict';
@@ -636,9 +626,9 @@
             "./Pattern": 5,
             "./utils/debug": 7,
             "./utils/errors": 9,
-            "./utils/noop": 10,
-            "./utils/stringify": 11,
-            "./utils/uuid": 12
+            "./utils/noop": 12,
+            "./utils/stringify": 13,
+            "./utils/uuid": 14
         }],
         7: [function(require, module, exports) {
             (function(process) {
@@ -670,82 +660,147 @@
 
             }).call(this, require('_process'))
         }, {
-            "./noop": 10,
+            "./noop": 12,
             "_process": 2
         }],
         8: [function(require, module, exports) {
             'use strict';
 
-            module.exports = function deepEqual(o, p, loose) {
-                var i = void 0;
+            var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function(obj) {
+                return typeof obj;
+            } : function(obj) {
+                return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj;
+            };
 
-                var lkeys = Object.keys(o).sort();
-                var rkeys = Object.keys(p).sort();
+            var pSlice = Array.prototype.slice;
+            var objectKeys = require('./keys');
+            var isArguments = require('./isArguments');
 
-                loose = loose === true ? true : false;
+            var deepEqual = module.exports = function(actual, expected, opts) {
+                opts = opts || {};
 
-                if (lkeys.length !== rkeys.length) {
-                    return false; // not the same nr of keys
+                // 7.1. All identical values are equivalent, as determined by ===.
+                if (actual === expected) {
+                    return true;
+                } else if (actual instanceof Date && expected instanceof Date) {
+                    return actual.getTime() === expected.getTime();
+
+                    // 7.3. Other pairs that do not both pass typeof value == 'object',
+                    // equivalence is determined by ==.
+                } else if (!actual || !expected || (typeof actual === 'undefined' ? 'undefined' : _typeof(actual)) != 'object' && (typeof expected === 'undefined' ? 'undefined' : _typeof(expected)) != 'object') {
+                    return opts.strict ? actual === expected : actual == expected;
+
+                    // 7.4. For all other Object pairs, including Array objects, equivalence is
+                    // determined by having the same number of owned properties (as verified
+                    // with Object.prototype.hasOwnProperty.call), the same set of keys
+                    // (although not necessarily the same order), equivalent values for every
+                    // corresponding key, and an identical 'prototype' property. Note: this
+                    // accounts for both named and indexed properties on Arrays.
+                } else {
+                    return objEquiv(actual, expected, opts);
+                }
+            };
+
+            function isUndefinedOrNull(value) {
+                return value === null || value === undefined;
+            }
+
+            function isBuffer(x) {
+                if (!x || (typeof x === 'undefined' ? 'undefined' : _typeof(x)) !== 'object' || typeof x.length !== 'number') {
+                    return false;
                 }
 
-                if (lkeys.join('') !== rkeys.join('')) {
-                    return false; // different keys
+                if (typeof x.copy !== 'function' || typeof x.slice !== 'function') {
+                    return false;
                 }
 
-                for (i = 0; i < lkeys.length; ++i) {
-                    if (o[lkeys[i]] instanceof Array) {
-                        if (!(p[lkeys[i]] instanceof Array)) {
-                            return false;
-                        }
-
-                        // if (compareObjects(o[lkeys[i]], p[lkeys[i]] === false) return false
-                        // would work, too, and perhaps is a better fit, still, this is easy, too
-                        if (p[lkeys[i]].sort().join('') !== o[lkeys[i]].sort().join('')) {
-                            return false;
-                        }
-                    } else if (o[lkeys[i]] instanceof Date) {
-                        if (!(p[lkeys[i]] instanceof Date)) {
-                            return false;
-                        }
-
-                        if ('' + o[lkeys[i]] !== '' + p[lkeys[i]]) {
-                            return false;
-                        }
-                    } else if (o[lkeys[i]] instanceof Function) {
-                        if (!(p[lkeys[i]] instanceof Function)) {
-                            return false;
-                        }
-                        // ignore functions, or check them regardless?
-                    } else if (o[lkeys[i]] instanceof Object) {
-                        if (!(p[lkeys[i]] instanceof Object)) {
-                            return false;
-                        }
-
-                        if (o[lkeys[i]] === o) {
-                            // self reference?
-                            if (p[lkeys[i]] !== p) {
-                                return false;
-                            }
-                        } else if (compareObjects(o[lkeys[i]], p[lkeys[i]]) === false) {
-                            return false; // WARNING: does not deal with circular refs other than
-                        }
-                    }
-
-                    if (loose) {
-                        if (o[lkeys[i]] != p[lkeys[i]]) {
-                            return false;
-                        }
-                    } else {
-                        if (o[lkeys[i]] !== p[lkeys[i]]) {
-                            return false; // not the same value
-                        }
-                    }
+                if (x.length > 0 && typeof x[0] !== 'number') {
+                    return false;
                 }
 
                 return true;
-            };
+            }
 
-        }, {}],
+            function objEquiv(a, b, opts) {
+                var i = void 0,
+                    key = void 0,
+                    ka = void 0,
+                    kb = void 0;
+
+                if (isUndefinedOrNull(a) || isUndefinedOrNull(b)) {
+                    return false;
+                }
+
+                if (a.prototype !== b.prototype) {
+                    return false;
+                }
+
+                if (isArguments(a)) {
+                    if (!isArguments(b)) {
+                        return false;
+                    }
+
+                    a = pSlice.call(a);
+                    b = pSlice.call(b);
+
+                    return deepEqual(a, b, opts);
+                }
+                if (isBuffer(a)) {
+                    if (!isBuffer(b)) {
+                        return false;
+                    }
+
+                    if (a.length !== b.length) {
+                        return false;
+                    }
+
+                    for (i = 0; i < a.length; i++) {
+                        if (a[i] !== b[i]) {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                }
+                try {
+                    ka = objectKeys(a);
+                    kb = objectKeys(b);
+                } catch (err) {
+                    // happens when one is a string literal and the other isn't
+                    return false;
+                }
+                // having the same number of owned properties (keys incorporates
+                // hasOwnProperty)
+                if (ka.length != kb.length) {
+                    return false;
+                }
+
+                // the same set of keys (although not necessarily the same order),
+                ka.sort();
+                kb.sort();
+
+                for (i = ka.length - 1; i >= 0; i--) {
+                    if (ka[i] != kb[i]) {
+                        return false;
+                    }
+                }
+
+                // equivalent values for every corresponding key
+                for (i = ka.length - 1; i >= 0; i--) {
+                    key = ka[i];
+
+                    if (!deepEqual(a[key], b[key], opts)) {
+                        return false;
+                    }
+                }
+
+                return (typeof a === 'undefined' ? 'undefined' : _typeof(a)) === (typeof b === 'undefined' ? 'undefined' : _typeof(b));
+            }
+
+        }, {
+            "./isArguments": 10,
+            "./keys": 11
+        }],
         9: [function(require, module, exports) {
             'use strict';
 
@@ -835,12 +890,64 @@
             "../Error": 4
         }],
         10: [function(require, module, exports) {
+            'use strict';
+
+            var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function(obj) {
+                return typeof obj;
+            } : function(obj) {
+                return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj;
+            };
+
+            var supportsArgumentsClass = function(undefined) {
+                return Object.prototype.toString.call(arguments);
+            }() == '[object Arguments]';
+
+            module.exports = supportsArgumentsClass ? supported : unsupported;
+
+            exports.supported = supported;
+
+            function supported(object) {
+                return Object.prototype.toString.call(object) == '[object Arguments]';
+            };
+
+            exports.unsupported = unsupported;
+
+            function unsupported(object) {
+                return object && (typeof object === 'undefined' ? 'undefined' : _typeof(object)) == 'object' && typeof object.length == 'number' && Object.prototype.hasOwnProperty.call(object, 'callee') && !Object.prototype.propertyIsEnumerable.call(object, 'callee') || false;
+            };
+
+        }, {}],
+        11: [function(require, module, exports) {
+            'use strict';
+
+            exports = module.exports = function(undefined) {
+                if (typeof Object.keys === 'function') {
+                    return Object.keys;
+                }
+
+                return shim;
+            }();
+
+            exports.shim = shim;
+
+            function shim(obj) {
+                var keys = [];
+
+                for (var key in obj) {
+                    keys.push(key);
+                }
+
+                return keys;
+            }
+
+        }, {}],
+        12: [function(require, module, exports) {
             "use strict";
 
             module.exports = function() { /* non operational method */ };
 
         }, {}],
-        11: [function(require, module, exports) {
+        13: [function(require, module, exports) {
             'use strict';
 
             module.exports = function(input) {
@@ -856,7 +963,7 @@
             };
 
         }, {}],
-        12: [function(require, module, exports) {
+        14: [function(require, module, exports) {
             'use strict';
 
             var guidBlock = function guidBlock() {
