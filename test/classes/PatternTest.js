@@ -15,7 +15,7 @@ function generateSignature(pattern) {
         index++;
     }
 
-    id += `@${pattern.id.replace(/-/g, '')}#${length}`;
+    id += `@${pattern.unique.replace(/-/g, '')}#${length}`;
     return id;
 }
 

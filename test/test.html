@@ -11,14 +11,15 @@
             module: 'error'
         }, (args, done) => {
             if(args.error) {
-                throw new Error(args.error + ' (delegated from ' + JSON.stringify(args.__delegate__) + ' with data ' + JSON.stringify(args.origin) + ')');
+                console.error(args.error + ' (delegated from ' + JSON.stringify(args.__delegate__) + ' with data ' + JSON.stringify(args.origin) + ')');
+                return done('fail');
             } else {
                 // no error available, simply skip ... 
                 done(null);
             }
         });
         
-        manager.register({
+        var appcacheReady = manager.register({
             module: 'appcache',
             event: 'ready'
         }, (args, done) => {
@@ -28,6 +29,8 @@
                 done(('Appcache status is not updateready!'));
             }
         });
+
+        // manager.unregister(appcacheReady); WORKS!
 
         manager.delegate({
             module: 'appcache',
