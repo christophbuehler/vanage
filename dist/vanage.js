@@ -578,13 +578,62 @@
                             this._postConfigHook();
                         }
                     }, {
+                        key: 'find',
+                        value: function find(factory) {
+                            var tuple = {
+                                delegates: [],
+                                handlers: []
+                            };
+
+                            this._handlers.forEach(function(handler) {
+                                if (handler.pattern.match(factory)) {
+                                    tuple.handlers.push(handler);
+                                }
+                            });
+
+                            this._delegates.forEach(function(delegate) {
+                                if (delegate.pattern.match(factory)) {
+                                    tuple.delegates.push(delegate);
+                                }
+                            });
+
+                            return tuple;
+                        }
+                    }, {
+                        key: 'queue',
+                        value: function queue(actions, callback) {
+                            var errors = [];
+                            var results = [];
+
+                            callback = callback || noop;
+
+                            if (!Array.isArray(actions)) {
+                                return this.fail(new TypeError('Queue needs an array with actions and not typeof ' + (typeof actions === 'undefined' ? 'undefined' : _typeof(actions))));
+                            }
+
+                            actions.forEach(function(action, index) {
+                                results.push(function(err, result) {
+                                    if (err) {
+                                        errors.push(err);
+                                    } else {
+                                        results.push(result);
+                                    }
+                                });
+
+                                action.apply(null, results);
+                                results.splice(index, 1);
+                            });
+
+                            return callback(errors, results);
+                        }
+                    }, {
                         key: 'unregister',
                         value: function unregister(signature) {
                             var self = this;
                             var successfull = false;
 
                             if (!(signature instanceof Signature)) {
-                                return this.fail(new Error.RegisterError('Cannot unregister by ' + (typeof signature === 'undefined' ? 'undefined' : _typeof(signature)) + ', signature needed'));
+                                return this.fail(new TypeError('Cannot unregister by ' + (typeof signature === 'undefined' ? 'undefined' : _typeof(signature)) + ', signature needed'));
                             }
 
                             this._handlers.forEach(function(handler, index) {
@@ -612,7 +661,7 @@
                             this.debug('Registring new handler for %s', str(ressource));
 
                             if ((typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource)) !== 'object') {
-                                return this.fail(new Error.RegisterError('Endpoint target must be an object and not type ' + (typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource))));
+                                return this.fail(new TypeError('Endpoint target must be an object and not type ' + (typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource))));
                             }
 
                             var factory = {
@@ -634,11 +683,11 @@
                             this.debug('Registering delegate for %s', str(ressource));
 
                             if ((typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource)) !== 'object') {
-                                return this.fail(new Error.DelegationError('Delegation ressource must be an object and not ' + (typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource))));
+                                return this.fail(new TypeError('Delegation ressource must be an object and not ' + (typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource))));
                             }
 
                             if (typeof delegation !== 'function') {
-                                return this.fail(new Error.DelegationError('Delegators need a function to delegate, received ' + (typeof delegation === 'undefined' ? 'undefined' : _typeof(delegation))));
+                                return this.fail(new TypeError('Delegators need a function to delegate, received ' + (typeof delegation === 'undefined' ? 'undefined' : _typeof(delegation))));
                             }
 
                             var factory = {
@@ -681,7 +730,7 @@
                                             delegationData = {};
                                         }
 
-                                        // TODO: Mixin with previous origin via Object.assign
+                                        // TODO: Ev. Mixin with previous origin via Object.assign?
                                         delegationData.origin = data;
 
                                         self.debug('Delegate target %s to %s', str(target), str(bubbler));
