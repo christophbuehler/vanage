@@ -4,9 +4,12 @@ const uuid = require('./utils/uuid');
 const noop = require('./utils/noop');
 const debug = require('./utils/debug');
 const str = require('./utils/stringify');
-const Errors = require('./utils/errors');
+const output = require('./utils/console');
+
+const Error = require('./Error');
 const Cache = require('./Cache');
 const Pattern = require('./Pattern');
+const Signature = require('./Signature');
 
 class Service {
     constructor(options) {
@@ -37,22 +40,77 @@ class Service {
         this._postConfigHook();
     }
 
+    unregister(signature) {
+        const self = this;
+        let successfull = false;
+
+        if(!(signature instanceof Signature)) {
+            return this.fail(new Error.RegisterError(`Cannot unregister by ${typeof signature}, signature needed`));
+        }
+
+        this._handlers.forEach((handler, index) => {
+            if(handler.pattern.id.match(signature)) {
+                debug(`Found handler to unregister with sign ${handler.pattern.signature}`);
+                self._handlers.splice(index, 1);
+                return successfull = true;
+            }
+        });
+
+        this._delegates.forEach((delegate, index) => {
+            if(delegate.pattern.id.match(signature)) {
+                debug(`Found delegate to unregister with sign ${delegate.pattern.signature}`);
+                self._delegates.splice(index, 1);
+                return successfull = true;
+            }
+        });
+
+        return successfull;
+    }
+
     register(ressource, handler) {
         const self = this;
         this.debug('Registring new handler for %s', str(ressource));
 
         if(typeof ressource !== 'object') {
-            throw new Errors.RegisterError(`Endpoint target must be an object and not type ${typeof ressource}`);
+            return this.fail(new Error.RegisterError(`Endpoint target must be an object and not type ${typeof ressource}`));
         }
 
-        const index = this._handlers.push({
+        const factory = {
             pattern: new Pattern(ressource),
             handler: handler,
-            service: self._internalId
-        });
+            rootService: self._internalId
+        };
 
+        const index = this._handlers.push(factory);
         const registry = this._handlers[index - 1];
         this._cache.set(registry.pattern.signature, registry);
+
+        return factory.pattern.id;
+    }
+
+    delegate(ressource, delegation) {
+        const self = this;
+        this.debug('Registering delegate for %s', str(ressource));
+
+        if(typeof ressource !== 'object') {
+            return this.fail(new Error.DelegationError(`Delegation ressource must be an object and not ${typeof ressource}`));
+        }
+
+        if(typeof delegation !== 'function') {
+            return this.fail(new Error.DelegationError(`Delegators need a function to delegate, received ${typeof delegation}`));
+        }
+
+        const factory = {
+            pattern: new Pattern(ressource),
+            delegate: delegation,
+            rootService: self._internalId
+        };
+
+        const index = this._delegates.push(factory);
+        const registry = this._delegates[index - 1];
+        this._cache.set(registry.pattern.signature, registry);
+
+        return factory.pattern.id;
     }
 
     act(target, data, resolver) {
@@ -62,7 +120,7 @@ class Service {
         resolver = typeof resolver === 'function' ? resolver : noop;
 
         if(!target) {
-            throw new Errors.ActError('No target defined to act event on');
+            return this.fail(new Error.ActError('No target defined to act event on'));
         }
 
         this.debug('%s for %s with data %s', data.__delegate__ ? 'Delegating Action' : 'Acting', str(target), str(data));
@@ -78,10 +136,11 @@ class Service {
                 self.debug('Found delegation for %s', str(target));
                 delegation.delegate.apply(null, [(bubbler, delegationData) => {
                     if(typeof delegationData !== 'object') {
-                        delegationData = data;
-                    } else {
-                        delegationData.origin = data;
+                        delegationData = {};
                     }
+                    
+                    // TODO: Mixin with previous origin via Object.assign
+                    delegationData.origin = data;
 
                     self.debug('Delegate target %s to %s', str(target), str(bubbler));
                     delegationData.__delegate__ = target;
@@ -92,9 +151,9 @@ class Service {
 
         this._handlers.forEach(factory => {
             if(factory.pattern.match(target)) {
-                factory.handler.apply(null, [data, (Errors, result) => {
+                factory.handler.apply(null, [data, (error, result) => {
                     self.debug('Handling factory %s with data %s', str(target), str(data));
-                    return resolver.apply(null, [Errors, result, (delegate, delegationData) => {
+                    return resolver.apply(null, [error, result, (delegate, delegationData) => {
                         if(typeof delegationData !== 'object') {
                             delegationData = {};
                         }
@@ -108,26 +167,20 @@ class Service {
         });
     }
 
-    delegate(ressource, delegation) {
-        const self = this;
-        this.debug('Registering delegate for %s', str(ressource));
+    fail(err) {
+        let message = '';
+        message += `[${err.name}#${err.callee || 'Callee::<unknown>'}]`;
+        message += `${err.message} ${err.stamp ? `@ ${err.stamp}` : ''}`;
 
-        if(typeof ressource !== 'object') {
-            throw new Errors.DelegationError(`Delegation ressource must be an object and not ${typeof ressource}`);
+        if(typeof output.error === 'function') {
+            output.error.apply(output, message);
+        } else if (typeof output.log === 'function') {
+            output.log.apply(output, message);
+        } else if (typeof output.write === 'function') {
+            output.write.apply(process, message + '\n');
         }
 
-        if(typeof delegation !== 'function') {
-            throw new Errors.DelegationError(`Delegators need a function to delegate, received ${typeof delegation}`);
-        }
-
-        const index = this._delegates.push({
-            pattern: new Pattern(ressource),
-            delegate: delegation,
-            service: self._internalId
-        });
-
-        const registry = this._delegates[index - 1];
-        this._cache.set(registry.pattern.signature, registry);
+        return err;
     }
 
     _postConfigHook() {

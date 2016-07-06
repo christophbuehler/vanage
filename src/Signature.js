@@ -1,6 +1,7 @@
 'use strict';
 
 const uuid = require('./utils/uuid');
+const equals = require('./utils/equal');
 
 class Signature {
     constructor(id, factory) {
@@ -18,7 +19,27 @@ class Signature {
     }
 
     get identifierKeys() {
-        return Object.keys(this.identifier);
+        return Object.keys(this.identifier) || [];
+    }
+
+    match(signature) {
+        // we only compare signature instances here
+        if(!(signature instanceof Signature)) {
+            return false;
+        }
+
+        // skip if they dont have the same amount of factory keys
+        if(signature.identifierKeys.length !== this.identifierKeys.length) {
+            return false;
+        }
+
+        // check if the general hash is the same as string comparison
+        if(signature.value !== this.value) {
+            return false;
+        }
+
+        // factory based deep equality check
+        return equals(signature.identifier, this.identifier);
     }
 
     _stringifyObjectLike(obj) {

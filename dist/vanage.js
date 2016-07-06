@@ -48,10 +48,12 @@
             var uuid = require('./src/utils/uuid');
             var Service = require('./src/Service');
             var Cache = require('./src/Cache');
+            var Error = require('./src/Error');
 
             module.exports = function(undefined) {
                 return {
                     Cache: Cache,
+                    Error: Error,
                     Service: Service,
                     create: function create(settings) {
                         settings = settings || {
@@ -66,6 +68,7 @@
 
         }, {
             "./src/Cache": 3,
+            "./src/Error": 4,
             "./src/Service": 6,
             "./src/utils/uuid": 15
         }],
@@ -322,16 +325,17 @@
                 if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
             }
 
-            var ExtendableServiceError = function(_Error) {
-                _inherits(ExtendableServiceError, _Error);
+            var InternalBaseError = function(_Error) {
+                _inherits(InternalBaseError, _Error);
 
-                function ExtendableServiceError(message) {
-                    _classCallCheck(this, ExtendableServiceError);
+                function InternalBaseError(message) {
+                    _classCallCheck(this, InternalBaseError);
 
-                    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(ExtendableServiceError).call(this, message));
+                    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(InternalBaseError).call(this, message));
 
                     _this.name = _this.constructor.name;
                     _this.message = message;
+                    _this.stamp = Date.now();
 
                     if (typeof Error.captureStackTrace === 'function') {
                         Error.captureStackTrace(_this, _this.constructor);
@@ -341,30 +345,93 @@
                     return _this;
                 }
 
-                _createClass(ExtendableServiceError, [{
-                    key: 'setCallee',
-                    value: function setCallee(callee) {
-                        this.callee = callee;
+                _createClass(InternalBaseError, [{
+                    key: 'callee',
+                    set: function set(callee) {
+                        if (typeof callee === 'string') {
+                            this.callee = callee;
+                        }
+                    },
+                    get: function get() {
+                        return 'Callee::' + this.callee;
                     }
                 }]);
 
-                return ExtendableServiceError;
+                return InternalBaseError;
             }(Error);
 
-            var ServiceError = function(_ExtendableServiceErr) {
-                _inherits(ServiceError, _ExtendableServiceErr);
+            var VanageError = function(_InternalBaseError) {
+                _inherits(VanageError, _InternalBaseError);
 
-                function ServiceError(message) {
-                    _classCallCheck(this, ServiceError);
+                function VanageError(message) {
+                    _classCallCheck(this, VanageError);
 
-                    return _possibleConstructorReturn(this, Object.getPrototypeOf(ServiceError).call(this, message));
+                    return _possibleConstructorReturn(this, Object.getPrototypeOf(VanageError).call(this, message));
                 }
 
-                return ServiceError;
-            }(ExtendableServiceError);
+                _createClass(VanageError, [{
+                    key: 'toString',
+                    value: function toString() {
+                        return '[' + this.name + '#' + (this.callee || '<unknown>') + '] ' + this.message + ' @ ' + this.stamp;
+                    }
+                }]);
 
-            exports.ExtendableServiceError = ExtendableServiceError;
-            exports.ServiceError = ServiceError;
+                return VanageError;
+            }(InternalBaseError);
+
+            var DelegationError = function(_InternalBaseError2) {
+                _inherits(DelegationError, _InternalBaseError2);
+
+                function DelegationError(message) {
+                    _classCallCheck(this, DelegationError);
+
+                    var _this3 = _possibleConstructorReturn(this, Object.getPrototypeOf(DelegationError).call(this, message));
+
+                    _this3.name = 'DelegationError';
+                    _this3.callee = 'Service.delegate';
+                    return _this3;
+                }
+
+                return DelegationError;
+            }(InternalBaseError);
+
+            var ActError = function(_InternalBaseError3) {
+                _inherits(ActError, _InternalBaseError3);
+
+                function ActError(message) {
+                    _classCallCheck(this, ActError);
+
+                    var _this4 = _possibleConstructorReturn(this, Object.getPrototypeOf(ActError).call(this, message));
+
+                    _this4.name = 'ActError';
+                    _this4.callee = 'Service.act';
+                    return _this4;
+                }
+
+                return ActError;
+            }(InternalBaseError);
+
+            var RegisterError = function(_InternalBaseError4) {
+                _inherits(RegisterError, _InternalBaseError4);
+
+                function RegisterError(message) {
+                    _classCallCheck(this, RegisterError);
+
+                    var _this5 = _possibleConstructorReturn(this, Object.getPrototypeOf(RegisterError).call(this, message));
+
+                    _this5.name = 'RegisterError';
+                    _this5.callee = 'Service.register';
+                    return _this5;
+                }
+
+                return RegisterError;
+            }(InternalBaseError);
+
+            exports.InternalBaseError = InternalBaseError;
+            exports.ServiceError = VanageError;
+            exports.DelegationError = DelegationError;
+            exports.ActError = ActError;
+            exports.RegisterError = RegisterError;
 
         }, {}],
         5: [function(require, module, exports) {
@@ -398,19 +465,24 @@
             var uuid = require('./utils/uuid');
 
             var Pattern = function() {
-                function Pattern(identifier) {
+                function Pattern(factory) {
                     _classCallCheck(this, Pattern);
 
                     this.name = 'Vanage.Pattern';
-                    this.base = identifier;
-                    this.id = uuid();
-                    this.signature = new Signature(this.id, this.base).value;
+                    this.base = factory;
+                    this.unique = uuid();
+                    this.id = new Signature(this.unique, this.base);
                 }
 
                 _createClass(Pattern, [{
                     key: 'match',
                     value: function match(foreign) {
                         return equals(this.base, foreign);
+                    }
+                }, {
+                    key: 'signature',
+                    get: function get() {
+                        return this.id.value;
                     }
                 }, {
                     key: 'keys',
@@ -426,198 +498,258 @@
 
         }, {
             "./Signature": 7,
-            "./utils/equal": 9,
+            "./utils/equal": 10,
             "./utils/uuid": 15
         }],
         6: [function(require, module, exports) {
-            'use strict';
+            (function(process) {
+                'use strict';
 
-            var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function(obj) {
-                return typeof obj;
-            } : function(obj) {
-                return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj;
-            };
-
-            var _createClass = function() {
-                function defineProperties(target, props) {
-                    for (var i = 0; i < props.length; i++) {
-                        var descriptor = props[i];
-                        descriptor.enumerable = descriptor.enumerable || false;
-                        descriptor.configurable = true;
-                        if ("value" in descriptor) descriptor.writable = true;
-                        Object.defineProperty(target, descriptor.key, descriptor);
-                    }
-                }
-                return function(Constructor, protoProps, staticProps) {
-                    if (protoProps) defineProperties(Constructor.prototype, protoProps);
-                    if (staticProps) defineProperties(Constructor, staticProps);
-                    return Constructor;
+                var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function(obj) {
+                    return typeof obj;
+                } : function(obj) {
+                    return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj;
                 };
-            }();
 
-            function _classCallCheck(instance, Constructor) {
-                if (!(instance instanceof Constructor)) {
-                    throw new TypeError("Cannot call a class as a function");
-                }
-            }
+                var _createClass = function() {
+                    function defineProperties(target, props) {
+                        for (var i = 0; i < props.length; i++) {
+                            var descriptor = props[i];
+                            descriptor.enumerable = descriptor.enumerable || false;
+                            descriptor.configurable = true;
+                            if ("value" in descriptor) descriptor.writable = true;
+                            Object.defineProperty(target, descriptor.key, descriptor);
+                        }
+                    }
+                    return function(Constructor, protoProps, staticProps) {
+                        if (protoProps) defineProperties(Constructor.prototype, protoProps);
+                        if (staticProps) defineProperties(Constructor, staticProps);
+                        return Constructor;
+                    };
+                }();
 
-            var uuid = require('./utils/uuid');
-            var noop = require('./utils/noop');
-            var debug = require('./utils/debug');
-            var str = require('./utils/stringify');
-            var Errors = require('./utils/errors');
-            var Cache = require('./Cache');
-            var Pattern = require('./Pattern');
-
-            var Service = function() {
-                function Service(options) {
-                    _classCallCheck(this, Service);
-
-                    this.name = 'Vanage.Service';
-                    this.options = options || {};
-                    this.id = options.identifier || uuid();
-                    this.debug = noop;
-
-                    this._internalId = Math.random().toString(36).slice(-12);
-                    this._history = new Cache();
-                    this._cache = new Cache();
-                    this._delegates = [];
-                    this._handlers = [];
+                function _classCallCheck(instance, Constructor) {
+                    if (!(instance instanceof Constructor)) {
+                        throw new TypeError("Cannot call a class as a function");
+                    }
                 }
 
-                _createClass(Service, [{
-                    key: 'configure',
-                    value: function configure(options) {
-                        if ((typeof options === 'undefined' ? 'undefined' : _typeof(options)) === 'object') {
-                            for (var key in options) {
-                                this.options[key] = options[key];
+                var uuid = require('./utils/uuid');
+                var noop = require('./utils/noop');
+                var debug = require('./utils/debug');
+                var str = require('./utils/stringify');
+                var output = require('./utils/console');
+
+                var Error = require('./Error');
+                var Cache = require('./Cache');
+                var Pattern = require('./Pattern');
+                var Signature = require('./Signature');
+
+                var Service = function() {
+                    function Service(options) {
+                        _classCallCheck(this, Service);
+
+                        this.name = 'Vanage.Service';
+                        this.options = options || {};
+                        this.id = options.identifier || uuid();
+                        this.debug = noop;
+
+                        this._internalId = Math.random().toString(36).slice(-12);
+                        this._history = new Cache();
+                        this._cache = new Cache();
+                        this._delegates = [];
+                        this._handlers = [];
+                    }
+
+                    _createClass(Service, [{
+                        key: 'configure',
+                        value: function configure(options) {
+                            if ((typeof options === 'undefined' ? 'undefined' : _typeof(options)) === 'object') {
+                                for (var key in options) {
+                                    this.options[key] = options[key];
+                                }
                             }
+
+                            this._postConfigHook();
                         }
-
-                        this._postConfigHook();
-                    }
-                }, {
-                    key: 'set',
-                    value: function set(key, value) {
-                        this.options[key] = value;
-                        this._postConfigHook();
-                    }
-                }, {
-                    key: 'register',
-                    value: function register(ressource, handler) {
-                        var self = this;
-                        this.debug('Registring new handler for %s', str(ressource));
-
-                        if ((typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource)) !== 'object') {
-                            throw new Errors.RegisterError('Endpoint target must be an object and not type ' + (typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource)));
+                    }, {
+                        key: 'set',
+                        value: function set(key, value) {
+                            this.options[key] = value;
+                            this._postConfigHook();
                         }
+                    }, {
+                        key: 'unregister',
+                        value: function unregister(signature) {
+                            var self = this;
+                            var successfull = false;
 
-                        var index = this._handlers.push({
-                            pattern: new Pattern(ressource),
-                            handler: handler,
-                            service: self._internalId
-                        });
-
-                        var registry = this._handlers[index - 1];
-                        this._cache.set(registry.pattern.signature, registry);
-                    }
-                }, {
-                    key: 'act',
-                    value: function act(target, data, resolver) {
-                        var self = this;
-
-                        data = data || {};
-                        resolver = typeof resolver === 'function' ? resolver : noop;
-
-                        if (!target) {
-                            throw new Errors.ActError('No target defined to act event on');
-                        }
-
-                        this.debug('%s for %s with data %s', data.__delegate__ ? 'Delegating Action' : 'Acting', str(target), str(data));
-                        this._history.set(new Pattern(target).signature, {
-                            data: data,
-                            stamp: Date.now(),
-                            target: target,
-                            resolver: resolver
-                        });
-
-                        this._delegates.forEach(function(delegation) {
-                            if (delegation.pattern.match(target)) {
-                                self.debug('Found delegation for %s', str(target));
-                                delegation.delegate.apply(null, [function(bubbler, delegationData) {
-                                    if ((typeof delegationData === 'undefined' ? 'undefined' : _typeof(delegationData)) !== 'object') {
-                                        delegationData = data;
-                                    } else {
-                                        delegationData.origin = data;
-                                    }
-
-                                    self.debug('Delegate target %s to %s', str(target), str(bubbler));
-                                    delegationData.__delegate__ = target;
-                                    self.act(bubbler, delegationData, resolver);
-                                }]);
+                            if (!(signature instanceof Signature)) {
+                                return this.fail(new Error.RegisterError('Cannot unregister by ' + (typeof signature === 'undefined' ? 'undefined' : _typeof(signature)) + ', signature needed'));
                             }
-                        });
 
-                        this._handlers.forEach(function(factory) {
-                            if (factory.pattern.match(target)) {
-                                factory.handler.apply(null, [data, function(Errors, result) {
-                                    self.debug('Handling factory %s with data %s', str(target), str(data));
-                                    return resolver.apply(null, [Errors, result, function(delegate, delegationData) {
+                            this._handlers.forEach(function(handler, index) {
+                                if (handler.pattern.id.match(signature)) {
+                                    debug('Found handler to unregister with sign ' + handler.pattern.signature);
+                                    self._handlers.splice(index, 1);
+                                    return successfull = true;
+                                }
+                            });
+
+                            this._delegates.forEach(function(delegate, index) {
+                                if (delegate.pattern.id.match(signature)) {
+                                    debug('Found delegate to unregister with sign ' + delegate.pattern.signature);
+                                    self._delegates.splice(index, 1);
+                                    return successfull = true;
+                                }
+                            });
+
+                            return successfull;
+                        }
+                    }, {
+                        key: 'register',
+                        value: function register(ressource, handler) {
+                            var self = this;
+                            this.debug('Registring new handler for %s', str(ressource));
+
+                            if ((typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource)) !== 'object') {
+                                return this.fail(new Error.RegisterError('Endpoint target must be an object and not type ' + (typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource))));
+                            }
+
+                            var factory = {
+                                pattern: new Pattern(ressource),
+                                handler: handler,
+                                rootService: self._internalId
+                            };
+
+                            var index = this._handlers.push(factory);
+                            var registry = this._handlers[index - 1];
+                            this._cache.set(registry.pattern.signature, registry);
+
+                            return factory.pattern.id;
+                        }
+                    }, {
+                        key: 'delegate',
+                        value: function delegate(ressource, delegation) {
+                            var self = this;
+                            this.debug('Registering delegate for %s', str(ressource));
+
+                            if ((typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource)) !== 'object') {
+                                return this.fail(new Error.DelegationError('Delegation ressource must be an object and not ' + (typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource))));
+                            }
+
+                            if (typeof delegation !== 'function') {
+                                return this.fail(new Error.DelegationError('Delegators need a function to delegate, received ' + (typeof delegation === 'undefined' ? 'undefined' : _typeof(delegation))));
+                            }
+
+                            var factory = {
+                                pattern: new Pattern(ressource),
+                                delegate: delegation,
+                                rootService: self._internalId
+                            };
+
+                            var index = this._delegates.push(factory);
+                            var registry = this._delegates[index - 1];
+                            this._cache.set(registry.pattern.signature, registry);
+
+                            return factory.pattern.id;
+                        }
+                    }, {
+                        key: 'act',
+                        value: function act(target, data, resolver) {
+                            var self = this;
+
+                            data = data || {};
+                            resolver = typeof resolver === 'function' ? resolver : noop;
+
+                            if (!target) {
+                                return this.fail(new Error.ActError('No target defined to act event on'));
+                            }
+
+                            this.debug('%s for %s with data %s', data.__delegate__ ? 'Delegating Action' : 'Acting', str(target), str(data));
+                            this._history.set(new Pattern(target).signature, {
+                                data: data,
+                                stamp: Date.now(),
+                                target: target,
+                                resolver: resolver
+                            });
+
+                            this._delegates.forEach(function(delegation) {
+                                if (delegation.pattern.match(target)) {
+                                    self.debug('Found delegation for %s', str(target));
+                                    delegation.delegate.apply(null, [function(bubbler, delegationData) {
                                         if ((typeof delegationData === 'undefined' ? 'undefined' : _typeof(delegationData)) !== 'object') {
                                             delegationData = {};
                                         }
 
-                                        delegationData.__delegate__ = target;
+                                        // TODO: Mixin with previous origin via Object.assign
                                         delegationData.origin = data;
-                                        self.act(delegate, delegationData);
+
+                                        self.debug('Delegate target %s to %s', str(target), str(bubbler));
+                                        delegationData.__delegate__ = target;
+                                        self.act(bubbler, delegationData, resolver);
                                     }]);
-                                }]);
+                                }
+                            });
+
+                            this._handlers.forEach(function(factory) {
+                                if (factory.pattern.match(target)) {
+                                    factory.handler.apply(null, [data, function(error, result) {
+                                        self.debug('Handling factory %s with data %s', str(target), str(data));
+                                        return resolver.apply(null, [error, result, function(delegate, delegationData) {
+                                            if ((typeof delegationData === 'undefined' ? 'undefined' : _typeof(delegationData)) !== 'object') {
+                                                delegationData = {};
+                                            }
+
+                                            delegationData.__delegate__ = target;
+                                            delegationData.origin = data;
+                                            self.act(delegate, delegationData);
+                                        }]);
+                                    }]);
+                                }
+                            });
+                        }
+                    }, {
+                        key: 'fail',
+                        value: function fail(err) {
+                            var message = '';
+                            message += '[' + err.name + '#' + (err.callee || 'Callee::<unknown>') + ']';
+                            message += err.message + ' ' + (err.stamp ? '@ ' + err.stamp : '');
+
+                            if (typeof output.error === 'function') {
+                                output.error.apply(output, message);
+                            } else if (typeof output.log === 'function') {
+                                output.log.apply(output, message);
+                            } else if (typeof output.write === 'function') {
+                                output.write.apply(process, message + '\n');
                             }
-                        });
-                    }
-                }, {
-                    key: 'delegate',
-                    value: function delegate(ressource, delegation) {
-                        var self = this;
-                        this.debug('Registering delegate for %s', str(ressource));
 
-                        if ((typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource)) !== 'object') {
-                            throw new Errors.DelegationError('Delegation ressource must be an object and not ' + (typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource)));
+                            return err;
                         }
-
-                        if (typeof delegation !== 'function') {
-                            throw new Errors.DelegationError('Delegators need a function to delegate, received ' + (typeof delegation === 'undefined' ? 'undefined' : _typeof(delegation)));
+                    }, {
+                        key: '_postConfigHook',
+                        value: function _postConfigHook() {
+                            this.debug = debug(this.options.debug);
                         }
+                    }]);
 
-                        var index = this._delegates.push({
-                            pattern: new Pattern(ressource),
-                            delegate: delegation,
-                            service: self._internalId
-                        });
+                    return Service;
+                }();
 
-                        var registry = this._delegates[index - 1];
-                        this._cache.set(registry.pattern.signature, registry);
-                    }
-                }, {
-                    key: '_postConfigHook',
-                    value: function _postConfigHook() {
-                        this.debug = debug(this.options.debug);
-                    }
-                }]);
+                module.exports = Service;
 
-                return Service;
-            }();
-
-            module.exports = Service;
-
+            }).call(this, require('_process'))
         }, {
             "./Cache": 3,
+            "./Error": 4,
             "./Pattern": 5,
-            "./utils/debug": 8,
-            "./utils/errors": 10,
+            "./Signature": 7,
+            "./utils/console": 8,
+            "./utils/debug": 9,
             "./utils/noop": 13,
             "./utils/stringify": 14,
-            "./utils/uuid": 15
+            "./utils/uuid": 15,
+            "_process": 2
         }],
         7: [function(require, module, exports) {
             'use strict';
@@ -652,6 +784,7 @@
             }
 
             var uuid = require('./utils/uuid');
+            var equals = require('./utils/equal');
 
             var Signature = function() {
                 function Signature(id, factory) {
@@ -662,6 +795,27 @@
                 }
 
                 _createClass(Signature, [{
+                    key: 'match',
+                    value: function match(signature) {
+                        // we only compare signature instances here
+                        if (!(signature instanceof Signature)) {
+                            return false;
+                        }
+
+                        // skip if they dont have the same amount of factory keys
+                        if (signature.identifierKeys.length !== this.identifierKeys.length) {
+                            return false;
+                        }
+
+                        // check if the general hash is the same as string comparison
+                        if (signature.value !== this.value) {
+                            return false;
+                        }
+
+                        // factory based deep equality check
+                        return equals(signature.identifier, this.identifier);
+                    }
+                }, {
                     key: '_stringifyObjectLike',
                     value: function _stringifyObjectLike(obj) {
                         var self = this;
@@ -702,7 +856,7 @@
                 }, {
                     key: 'identifierKeys',
                     get: function get() {
-                        return Object.keys(this.identifier);
+                        return Object.keys(this.identifier) || [];
                     }
                 }]);
 
@@ -712,6 +866,7 @@
             module.exports = Signature;
 
         }, {
+            "./utils/equal": 10,
             "./utils/uuid": 15
         }],
         8: [function(require, module, exports) {
@@ -724,18 +879,33 @@
                     return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj;
                 };
 
+                module.exports = function() {
+                    if ((typeof console === 'undefined' ? 'undefined' : _typeof(console)) !== undefined) {
+                        return console;
+                    } else if (process && typeof process.stdout.write === 'function') {
+                        return process.stdout;
+                    }
+                };
+
+            }).call(this, require('_process'))
+        }, {
+            "_process": 2
+        }],
+        9: [function(require, module, exports) {
+            (function(process) {
+                'use strict';
+
                 var noop = require('./noop');
+                var console = require('./console')();
 
                 module.exports = function(enabled) {
                     if (enabled) {
-                        if ((typeof console === 'undefined' ? 'undefined' : _typeof(console)) !== undefined) {
-                            if (typeof console.debug === 'function') {
-                                return console.debug.bind(console);
-                            } else if (typeof console.log === 'function') {
-                                return console.log.bind(console);
-                            } else if (process && typeof process.stdout.write === 'function') {
-                                return process.stdout.write.bind(process);
-                            }
+                        if (typeof console.debug === 'function') {
+                            return console.debug.bind(console);
+                        } else if (typeof console.log === 'function') {
+                            return console.log.bind(console);
+                        } else if (process && typeof process.stdout.write === 'function') {
+                            return process.stdout.write.bind(process);
                         }
                     }
 
@@ -744,10 +914,11 @@
 
             }).call(this, require('_process'))
         }, {
+            "./console": 8,
             "./noop": 13,
             "_process": 2
         }],
-        9: [function(require, module, exports) {
+        10: [function(require, module, exports) {
             'use strict';
 
             var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function(obj) {
@@ -884,94 +1055,6 @@
         }, {
             "./isArguments": 11,
             "./keys": 12
-        }],
-        10: [function(require, module, exports) {
-            'use strict';
-
-            function _classCallCheck(instance, Constructor) {
-                if (!(instance instanceof Constructor)) {
-                    throw new TypeError("Cannot call a class as a function");
-                }
-            }
-
-            function _possibleConstructorReturn(self, call) {
-                if (!self) {
-                    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
-                }
-                return call && (typeof call === "object" || typeof call === "function") ? call : self;
-            }
-
-            function _inherits(subClass, superClass) {
-                if (typeof superClass !== "function" && superClass !== null) {
-                    throw new TypeError("Super expression must either be null or a function, not " + typeof superClass);
-                }
-                subClass.prototype = Object.create(superClass && superClass.prototype, {
-                    constructor: {
-                        value: subClass,
-                        enumerable: false,
-                        writable: true,
-                        configurable: true
-                    }
-                });
-                if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
-            }
-
-            var ExtendableServiceError = require('../Error').ExtendableServiceError;
-
-            var DelegationError = function(_ExtendableServiceErr) {
-                _inherits(DelegationError, _ExtendableServiceErr);
-
-                function DelegationError(message) {
-                    _classCallCheck(this, DelegationError);
-
-                    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(DelegationError).call(this, message));
-
-                    _this.name = 'DelegationError';
-                    _this.callee = 'Service.delegate';
-                    return _this;
-                }
-
-                return DelegationError;
-            }(ExtendableServiceError);
-
-            var ActError = function(_ExtendableServiceErr2) {
-                _inherits(ActError, _ExtendableServiceErr2);
-
-                function ActError(message) {
-                    _classCallCheck(this, ActError);
-
-                    var _this2 = _possibleConstructorReturn(this, Object.getPrototypeOf(ActError).call(this, message));
-
-                    _this2.name = 'ActError';
-                    _this2.callee = 'Service.act';
-                    return _this2;
-                }
-
-                return ActError;
-            }(ExtendableServiceError);
-
-            var RegisterError = function(_ExtendableServiceErr3) {
-                _inherits(RegisterError, _ExtendableServiceErr3);
-
-                function RegisterError(message) {
-                    _classCallCheck(this, RegisterError);
-
-                    var _this3 = _possibleConstructorReturn(this, Object.getPrototypeOf(RegisterError).call(this, message));
-
-                    _this3.name = 'RegisterError';
-                    _this3.callee = 'Service.register';
-                    return _this3;
-                }
-
-                return RegisterError;
-            }(ExtendableServiceError);
-
-            exports.DelegationError = DelegationError;
-            exports.ActError = ActError;
-            exports.RegisterError = RegisterError;
-
-        }, {
-            "../Error": 4
         }],
         11: [function(require, module, exports) {
             'use strict';

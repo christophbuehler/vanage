@@ -1,11 +1,12 @@
 'use strict';
 
-class ExtendableServiceError extends Error {
+class InternalBaseError extends Error {
      constructor(message) {
         super(message);
 
         this.name = this.constructor.name;
         this.message = message;
+        this.stamp = Date.now();
 
         if (typeof Error.captureStackTrace === 'function') {
             Error.captureStackTrace(this, this.constructor);
@@ -14,16 +15,57 @@ class ExtendableServiceError extends Error {
         }
     }
 
-    setCallee(callee) {
-        this.callee = callee;
+    set callee(callee) {
+        if(typeof callee === 'string') {
+            this.callee = callee;
+        }
+    }
+
+    get callee() {
+        return 'Callee::' + this.callee;
     }
 }
 
-class ServiceError extends ExtendableServiceError {
+class VanageError extends InternalBaseError {
     constructor(message) {
         super(message);
     }
+
+    toString() {
+        return `[${this.name}#${this.callee || '<unknown>'}] ${this.message} @ ${this.stamp}`;
+    }
 }
 
-exports.ExtendableServiceError = ExtendableServiceError;
-exports.ServiceError = ServiceError;
+
+class DelegationError extends InternalBaseError {
+    constructor(message) {
+        super(message);
+
+        this.name = 'DelegationError';
+        this.callee = 'Service.delegate';
+    }
+}
+
+class ActError extends InternalBaseError {
+    constructor(message) {
+        super(message);
+
+        this.name = 'ActError';
+        this.callee = 'Service.act';
+    }
+}
+
+class RegisterError extends InternalBaseError {
+    constructor(message) {
+        super(message);
+
+        this.name = 'RegisterError';
+        this.callee = 'Service.register';
+    }
+}
+
+exports.InternalBaseError = InternalBaseError;
+exports.ServiceError = VanageError;
+exports.DelegationError = DelegationError;
+exports.ActError = ActError;
+exports.RegisterError = RegisterError;

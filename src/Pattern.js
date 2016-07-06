@@ -5,11 +5,15 @@ const equals = require('./utils/equal');
 const uuid = require('./utils/uuid');
 
 class Pattern {
-    constructor(identifier) {
+    constructor(factory) {
         this.name = 'Vanage.Pattern';
-        this.base = identifier;
-        this.id = uuid();
-        this.signature = new Signature(this.id, this.base).value;
+        this.base = factory;
+        this.unique = uuid();
+        this.id = new Signature(this.unique, this.base);
+    }
+
+    get signature() {
+        return this.id.value;
     }
 
     get keys() {
