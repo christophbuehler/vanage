@@ -12,6 +12,8 @@ engines:
                 enabled: false
             no-void:
                 enabled: false
+            indent:
+                enabled: false
 
 ratings:
     paths:
