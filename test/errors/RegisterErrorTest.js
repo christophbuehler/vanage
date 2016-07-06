@@ -1,7 +1,7 @@
 var expect = require('chai').expect;
 var assert = require('chai').assert;
 
-var RegisterError = require('../../src/utils/errors').RegisterError;
+var RegisterError = require('../../src/Error').RegisterError;
 
 describe('Vanage', function() {
     describe('Errors', function() {

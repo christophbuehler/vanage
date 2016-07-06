@@ -1,7 +1,7 @@
 var expect = require('chai').expect;
 var assert = require('chai').assert;
 
-var DelegationError = require('../../src/utils/errors').DelegationError;
+var DelegationError = require('../../src/Error').DelegationError;
 
 describe('Vanage', function() {
     describe('Errors', function() {

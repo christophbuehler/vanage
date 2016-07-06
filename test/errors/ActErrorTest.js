@@ -1,7 +1,7 @@
 var expect = require('chai').expect;
 var assert = require('chai').assert;
 
-var ActError = require('../../src/utils/errors').ActError;
+var ActError = require('../../src/Error').ActError;
 
 describe('Vanage', function() {
     describe('Errors', function() {

@@ -2,7 +2,7 @@
 [![Code Climate](https://codeclimate.com/github/janbiasi/vanage/badges/gpa.svg)](https://codeclimate.com/github/janbiasi/vanage)
 [![Test Coverage](https://codeclimate.com/github/janbiasi/vanage/badges/coverage.svg)](https://codeclimate.com/github/janbiasi/vanage/coverage)
 
-Handling events in the microservice way without any dependencies, for your Browser and Node.js
+Handling events in the microservice way without any dependencies, for your Browser and Node.js 
 
 ## Installation
 
