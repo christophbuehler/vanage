@@ -279,23 +279,6 @@
         4: [function(require, module, exports) {
             'use strict';
 
-            var _createClass = function() {
-                function defineProperties(target, props) {
-                    for (var i = 0; i < props.length; i++) {
-                        var descriptor = props[i];
-                        descriptor.enumerable = descriptor.enumerable || false;
-                        descriptor.configurable = true;
-                        if ("value" in descriptor) descriptor.writable = true;
-                        Object.defineProperty(target, descriptor.key, descriptor);
-                    }
-                }
-                return function(Constructor, protoProps, staticProps) {
-                    if (protoProps) defineProperties(Constructor.prototype, protoProps);
-                    if (staticProps) defineProperties(Constructor, staticProps);
-                    return Constructor;
-                };
-            }();
-
             function _classCallCheck(instance, Constructor) {
                 if (!(instance instanceof Constructor)) {
                     throw new TypeError("Cannot call a class as a function");
@@ -335,26 +318,19 @@
                     _this.name = _this.constructor.name;
                     _this.message = message;
                     _this.stamp = Date.now();
+                    _this.callee = '<unknown>';
 
                     if (typeof Error.captureStackTrace === 'function') {
                         Error.captureStackTrace(_this, _this.constructor);
                     } else {
                         _this.stack = new Error(message).stack;
                     }
+
+                    _this.prototype.toString = function() {
+                        return '[' + this.name + '#' + this.callee + '] ' + this.message + ' @ ' + this.stamp;
+                    };
                     return _this;
                 }
-
-                _createClass(InternalBaseError, [{
-                    key: 'callee',
-                    set: function set(callee) {
-                        if (typeof callee === 'string') {
-                            this.callee = callee;
-                        }
-                    },
-                    get: function get() {
-                        return 'Callee::' + this.callee;
-                    }
-                }]);
 
                 return InternalBaseError;
             }(Error);
@@ -367,13 +343,6 @@
 
                     return _possibleConstructorReturn(this, Object.getPrototypeOf(VanageError).call(this, message));
                 }
-
-                _createClass(VanageError, [{
-                    key: 'toString',
-                    value: function toString() {
-                        return '[' + this.name + '#' + (this.callee || '<unknown>') + '] ' + this.message + ' @ ' + this.stamp;
-                    }
-                }]);
 
                 return VanageError;
             }(InternalBaseError);

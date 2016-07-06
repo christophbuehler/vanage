@@ -7,6 +7,7 @@ class InternalBaseError extends Error {
         this.name = this.constructor.name;
         this.message = message;
         this.stamp = Date.now();
+        this.callee = '<unknown>';
 
         if (typeof Error.captureStackTrace === 'function') {
             Error.captureStackTrace(this, this.constructor);
@@ -15,24 +16,14 @@ class InternalBaseError extends Error {
         }
     }
 
-    set callee(callee) {
-        if(typeof callee === 'string') {
-            this.callee = callee;
-        }
-    }
-
-    get callee() {
-        return 'Callee::' + this.callee;
+    toString() {
+        return `[${this.name}#${this.callee}] ${this.message} @ ${this.stamp}`;
     }
 }
 
 class VanageError extends InternalBaseError {
     constructor(message) {
         super(message);
-    }
-
-    toString() {
-        return `[${this.name}#${this.callee || '<unknown>'}] ${this.message} @ ${this.stamp}`;
     }
 }
 
@@ -65,7 +56,7 @@ class RegisterError extends InternalBaseError {
 }
 
 exports.InternalBaseError = InternalBaseError;
-exports.ServiceError = VanageError;
+exports.VanageError = VanageError;
 exports.DelegationError = DelegationError;
 exports.ActError = ActError;
 exports.RegisterError = RegisterError;
