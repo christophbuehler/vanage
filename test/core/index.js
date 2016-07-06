@@ -1,6 +1,7 @@
 [
     'Cache',
-    'Pattern'
+    'Pattern',
+    'Signature'
 ].forEach(function(file) {
     require('./' + file + 'Test.js');
 });

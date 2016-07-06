@@ -11,7 +11,7 @@ function generateSignature(pattern) {
 
     for(var key in pattern.base) {
         id += index === 0 ? '' : '&'; 
-        id += `${key}=${pattern.base[key]}`;
+        id += `${key}:${pattern.base[key]}`;
         index++;
     }
 
@@ -27,8 +27,8 @@ describe('Vanage', function() {
                 action: 'create'
             });
 
-            expect(patt.signature()).to.be.a('string');
-            expect(patt.signature()).to.equal(generateSignature(patt));
+            expect(patt.signature).to.be.a('string');
+            expect(patt.signature).to.equal(generateSignature(patt));
         });
 
         it('should have a method to get the base target keys', function() {
