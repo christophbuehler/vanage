@@ -3,7 +3,7 @@ var assert = require('chai').assert;
 
 var DelegationError = require('../../src/utils/errors').DelegationError;
 
-describe('Service', function() {
+describe('Vanage', function() {
     describe('Errors', function() {
         describe('DelegationError', function() {
             it('should be a customized throwable error', function() {

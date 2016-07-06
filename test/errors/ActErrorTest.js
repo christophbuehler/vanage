@@ -3,7 +3,7 @@ var assert = require('chai').assert;
 
 var ActError = require('../../src/utils/errors').ActError;
 
-describe('Service', function() {
+describe('Vanage', function() {
     describe('Errors', function() {
         describe('ActError', function() {
             it('should be a customized throwable error', function() {
