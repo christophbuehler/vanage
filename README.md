@@ -108,11 +108,68 @@ Manager.act({
 
 ##### register
 
+Registers a new endpoint for an actor or arbitrator, specified by a certain factory and internal signature.
+
+| Number | Parameter | Type     | Signature |
+|--------|-----------|----------|-----------|
+| 1      | params    | Object   | -         |
+| 2      | done      | Function | (error: Error|null, result?: Any) |
+| 3      | delegate  | Function | (target: Object, data?: Any, done?: Function) |
+
+```js
+service.register({
+    any: 'key',
+    to: 'identify'
+}, (params, done, delegate) => {
+    return done(null, params);
+});
+```
+
 ##### unregister
+
+Will unregister a specific endpoint by passing a signature object into the unregister method. A signature 
+can be received by the register method. It will return a boolean which represents the internal result of the method, 
+while true means the unregistration process was successfull and false means there was no handler or delegate found with 
+this signature.
+
+| Number | Parameter | Type        |
+|--------|-----------|-------------|
+| 1      | sign      | Signature   |
+
+```js
+var sign = service.register({}, /* ... */);
+service.unregister(sign);
+```
 
 ##### delegate 
 
-##### act 
+##### act
+
+Executes a certain factory and handles the result of the registered process. You can also delegate to another target, 
+for example depending on the result.
+
+| Number | Parameter | Type     | Signature |
+|--------|-----------|----------|-----------|
+| 1      | err       | Any      | -         |
+| 2      | results   | Any      | - |
+| 3      | delegate  | Function | (target: Object, data?: Any, done?: Function) |
+
+```js
+service.act({
+    any: 'key',
+    to: 'identify'
+}, (err, results, delegate) => {
+    if(err) {
+        return delegate({
+            handle: 'error'
+        }, { failed: err });
+    }
+
+    $.get(results.apiUrl + '/users', res => {
+        // do something with the results
+    });
+});
+```
 
 ##### queue
 
