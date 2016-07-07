@@ -68,7 +68,7 @@ class Service {
         callback = callback || noop;
 
         if(!Array.isArray(actions)) {
-            return this.fail(new TypeError(`Queue needs an array with actions and not typeof ${typeof actions}`));
+            return this.fail(new TypeError(`[Service.queue] Queue needs an array with actions and not typeof ${typeof actions}`));
         }
 
         actions.forEach((action, index) => {
@@ -92,12 +92,12 @@ class Service {
         let successfull = false;
 
         if(!(signature instanceof Signature)) {
-            return this.fail(new TypeError(`Cannot unregister by ${typeof signature}, signature needed`));
+            return this.fail(new TypeError(`[Service.unregister] Cannot unregister by ${typeof signature}, signature needed`));
         }
 
         this._handlers.forEach((handler, index) => {
             if(handler.pattern.id.match(signature)) {
-                debug(`Found handler to unregister with sign ${handler.pattern.signature}`);
+                debug(`[Service.unregister] Found handler to unregister with sign ${handler.pattern.signature}`);
                 self._handlers.splice(index, 1);
                 return successfull = true;
             }
@@ -105,7 +105,7 @@ class Service {
 
         this._delegates.forEach((delegate, index) => {
             if(delegate.pattern.id.match(signature)) {
-                debug(`Found delegate to unregister with sign ${delegate.pattern.signature}`);
+                debug(`[Service.unregister] Found delegate to unregister with sign ${delegate.pattern.signature}`);
                 self._delegates.splice(index, 1);
                 return successfull = true;
             }
@@ -116,10 +116,10 @@ class Service {
 
     register(ressource, handler) {
         const self = this;
-        this.debug('Registring new handler for %s', str(ressource));
+        this.debug('[Service.register] Registring new handler for %s', str(ressource));
 
         if(typeof ressource !== 'object') {
-            return this.fail(new TypeError(`Endpoint target must be an object and not type ${typeof ressource}`));
+            return this.fail(new TypeError(`[Service.register] Endpoint target must be an object and not type ${typeof ressource}`));
         }
 
         const factory = {
@@ -137,14 +137,14 @@ class Service {
 
     delegate(ressource, delegation) {
         const self = this;
-        this.debug('Registering delegate for %s', str(ressource));
+        this.debug('[Service.delegate] Registering delegate for %s', str(ressource));
 
         if(typeof ressource !== 'object') {
-            return this.fail(new TypeError(`Delegation ressource must be an object and not ${typeof ressource}`));
+            return this.fail(new TypeError(`[Service.delegate] Delegation ressource must be an object and not ${typeof ressource}`));
         }
 
         if(typeof delegation !== 'function') {
-            return this.fail(new TypeError(`Delegators need a function to delegate, received ${typeof delegation}`));
+            return this.fail(new TypeError(`[Service.delegate] Delegators need a function to delegate, received ${typeof delegation}`));
         }
 
         const factory = {
@@ -167,10 +167,10 @@ class Service {
         resolver = typeof resolver === 'function' ? resolver : noop;
 
         if(!target) {
-            return this.fail(new Error.ActError('No target defined to act event on'));
+            return this.fail(new Error.ActError('[Service.act] No target defined to act event on'));
         }
 
-        this.debug('%s for %s with data %s', data.__delegate__ ? 'Delegating Action' : 'Acting', str(target), str(data));
+        this.debug('[Service.act] %s for %s with data %s', data.__delegate__ ? 'Delegating Action' : 'Acting', str(target), str(data));
         this._history.set(new Pattern(target).signature, {
             data: data,
             stamp: Date.now(),
@@ -180,7 +180,7 @@ class Service {
 
         this._delegates.forEach(delegation => {
             if(delegation.pattern.match(target)) {
-                self.debug('Found delegation for %s', str(target));
+                self.debug('[Service.delegate] Found delegation for %s', str(target));
                 delegation.delegate.apply(null, [(bubbler, delegationData) => {
                     if(typeof delegationData !== 'object') {
                         delegationData = {};
@@ -189,7 +189,7 @@ class Service {
                     // TODO: Ev. Mixin with previous origin via Object.assign?
                     delegationData.origin = data;
 
-                    self.debug('Delegate target %s to %s', str(target), str(bubbler));
+                    self.debug('[Service.delegate] Delegate target %s to %s', str(target), str(bubbler));
                     delegationData.__delegate__ = target;
                     self.act(bubbler, delegationData, resolver);
                 }]);
@@ -199,7 +199,8 @@ class Service {
         this._handlers.forEach(factory => {
             if(factory.pattern.match(target)) {
                 factory.handler.apply(null, [data, (error, result) => {
-                    self.debug('Handling factory %s with data %s', str(target), str(data));
+                    // done handler implementation
+                    self.debug('[Service.act] Handling factory %s with data %s', str(target), str(data));
                     return resolver.apply(null, [error, result, (delegate, delegationData) => {
                         if(typeof delegationData !== 'object') {
                             delegationData = {};
@@ -209,6 +210,18 @@ class Service {
                         delegationData.origin = data;
                         self.act(delegate, delegationData);
                     }]);
+                }, (bubbler, delegationData, delegationHandler) => {
+                    // delegation handler implementation
+                    if(typeof delegationData !== 'object') {
+                        delegationData = {};
+                    }
+                    
+                    // TODO: Ev. Mixin with previous origin via Object.assign?
+                    delegationData.origin = data;
+
+                    self.debug('[Service.register] Delegate target %s to %s', str(target), str(bubbler));
+                    delegationData.__delegate__ = target;
+                    self.act(bubbler, delegationData, delegationHandler || resolver);
                 }]);
             }
         });

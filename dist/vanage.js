@@ -279,6 +279,23 @@
         4: [function(require, module, exports) {
             'use strict';
 
+            var _createClass = function() {
+                function defineProperties(target, props) {
+                    for (var i = 0; i < props.length; i++) {
+                        var descriptor = props[i];
+                        descriptor.enumerable = descriptor.enumerable || false;
+                        descriptor.configurable = true;
+                        if ("value" in descriptor) descriptor.writable = true;
+                        Object.defineProperty(target, descriptor.key, descriptor);
+                    }
+                }
+                return function(Constructor, protoProps, staticProps) {
+                    if (protoProps) defineProperties(Constructor.prototype, protoProps);
+                    if (staticProps) defineProperties(Constructor, staticProps);
+                    return Constructor;
+                };
+            }();
+
             function _classCallCheck(instance, Constructor) {
                 if (!(instance instanceof Constructor)) {
                     throw new TypeError("Cannot call a class as a function");
@@ -325,12 +342,15 @@
                     } else {
                         _this.stack = new Error(message).stack;
                     }
-
-                    _this.prototype.toString = function() {
-                        return '[' + this.name + '#' + this.callee + '] ' + this.message + ' @ ' + this.stamp;
-                    };
                     return _this;
                 }
+
+                _createClass(InternalBaseError, [{
+                    key: 'toString',
+                    value: function toString() {
+                        return '[' + this.name + '#' + this.callee + '] ' + this.message + ' @ ' + this.stamp;
+                    }
+                }]);
 
                 return InternalBaseError;
             }(Error);
@@ -396,7 +416,7 @@
             }(InternalBaseError);
 
             exports.InternalBaseError = InternalBaseError;
-            exports.ServiceError = VanageError;
+            exports.VanageError = VanageError;
             exports.DelegationError = DelegationError;
             exports.ActError = ActError;
             exports.RegisterError = RegisterError;
@@ -577,7 +597,7 @@
                             callback = callback || noop;
 
                             if (!Array.isArray(actions)) {
-                                return this.fail(new TypeError('Queue needs an array with actions and not typeof ' + (typeof actions === 'undefined' ? 'undefined' : _typeof(actions))));
+                                return this.fail(new TypeError('[Service.queue] Queue needs an array with actions and not typeof ' + (typeof actions === 'undefined' ? 'undefined' : _typeof(actions))));
                             }
 
                             actions.forEach(function(action, index) {
@@ -602,12 +622,12 @@
                             var successfull = false;
 
                             if (!(signature instanceof Signature)) {
-                                return this.fail(new TypeError('Cannot unregister by ' + (typeof signature === 'undefined' ? 'undefined' : _typeof(signature)) + ', signature needed'));
+                                return this.fail(new TypeError('[Service.unregister] Cannot unregister by ' + (typeof signature === 'undefined' ? 'undefined' : _typeof(signature)) + ', signature needed'));
                             }
 
                             this._handlers.forEach(function(handler, index) {
                                 if (handler.pattern.id.match(signature)) {
-                                    debug('Found handler to unregister with sign ' + handler.pattern.signature);
+                                    debug('[Service.unregister] Found handler to unregister with sign ' + handler.pattern.signature);
                                     self._handlers.splice(index, 1);
                                     return successfull = true;
                                 }
@@ -615,7 +635,7 @@
 
                             this._delegates.forEach(function(delegate, index) {
                                 if (delegate.pattern.id.match(signature)) {
-                                    debug('Found delegate to unregister with sign ' + delegate.pattern.signature);
+                                    debug('[Service.unregister] Found delegate to unregister with sign ' + delegate.pattern.signature);
                                     self._delegates.splice(index, 1);
                                     return successfull = true;
                                 }
@@ -627,10 +647,10 @@
                         key: 'register',
                         value: function register(ressource, handler) {
                             var self = this;
-                            this.debug('Registring new handler for %s', str(ressource));
+                            this.debug('[Service.register] Registring new handler for %s', str(ressource));
 
                             if ((typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource)) !== 'object') {
-                                return this.fail(new TypeError('Endpoint target must be an object and not type ' + (typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource))));
+                                return this.fail(new TypeError('[Service.register] Endpoint target must be an object and not type ' + (typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource))));
                             }
 
                             var factory = {
@@ -649,14 +669,14 @@
                         key: 'delegate',
                         value: function delegate(ressource, delegation) {
                             var self = this;
-                            this.debug('Registering delegate for %s', str(ressource));
+                            this.debug('[Service.delegate] Registering delegate for %s', str(ressource));
 
                             if ((typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource)) !== 'object') {
-                                return this.fail(new TypeError('Delegation ressource must be an object and not ' + (typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource))));
+                                return this.fail(new TypeError('[Service.delegate] Delegation ressource must be an object and not ' + (typeof ressource === 'undefined' ? 'undefined' : _typeof(ressource))));
                             }
 
                             if (typeof delegation !== 'function') {
-                                return this.fail(new TypeError('Delegators need a function to delegate, received ' + (typeof delegation === 'undefined' ? 'undefined' : _typeof(delegation))));
+                                return this.fail(new TypeError('[Service.delegate] Delegators need a function to delegate, received ' + (typeof delegation === 'undefined' ? 'undefined' : _typeof(delegation))));
                             }
 
                             var factory = {
@@ -680,10 +700,10 @@
                             resolver = typeof resolver === 'function' ? resolver : noop;
 
                             if (!target) {
-                                return this.fail(new Error.ActError('No target defined to act event on'));
+                                return this.fail(new Error.ActError('[Service.act] No target defined to act event on'));
                             }
 
-                            this.debug('%s for %s with data %s', data.__delegate__ ? 'Delegating Action' : 'Acting', str(target), str(data));
+                            this.debug('[Service.act] %s for %s with data %s', data.__delegate__ ? 'Delegating Action' : 'Acting', str(target), str(data));
                             this._history.set(new Pattern(target).signature, {
                                 data: data,
                                 stamp: Date.now(),
@@ -693,7 +713,7 @@
 
                             this._delegates.forEach(function(delegation) {
                                 if (delegation.pattern.match(target)) {
-                                    self.debug('Found delegation for %s', str(target));
+                                    self.debug('[Service.delegate] Found delegation for %s', str(target));
                                     delegation.delegate.apply(null, [function(bubbler, delegationData) {
                                         if ((typeof delegationData === 'undefined' ? 'undefined' : _typeof(delegationData)) !== 'object') {
                                             delegationData = {};
@@ -702,7 +722,7 @@
                                         // TODO: Ev. Mixin with previous origin via Object.assign?
                                         delegationData.origin = data;
 
-                                        self.debug('Delegate target %s to %s', str(target), str(bubbler));
+                                        self.debug('[Service.delegate] Delegate target %s to %s', str(target), str(bubbler));
                                         delegationData.__delegate__ = target;
                                         self.act(bubbler, delegationData, resolver);
                                     }]);
@@ -712,7 +732,8 @@
                             this._handlers.forEach(function(factory) {
                                 if (factory.pattern.match(target)) {
                                     factory.handler.apply(null, [data, function(error, result) {
-                                        self.debug('Handling factory %s with data %s', str(target), str(data));
+                                        // done handler implementation
+                                        self.debug('[Service.act] Handling factory %s with data %s', str(target), str(data));
                                         return resolver.apply(null, [error, result, function(delegate, delegationData) {
                                             if ((typeof delegationData === 'undefined' ? 'undefined' : _typeof(delegationData)) !== 'object') {
                                                 delegationData = {};
@@ -722,6 +743,18 @@
                                             delegationData.origin = data;
                                             self.act(delegate, delegationData);
                                         }]);
+                                    }, function(bubbler, delegationData, delegationHandler) {
+                                        // delegation handler implementation
+                                        if ((typeof delegationData === 'undefined' ? 'undefined' : _typeof(delegationData)) !== 'object') {
+                                            delegationData = {};
+                                        }
+
+                                        // TODO: Ev. Mixin with previous origin via Object.assign?
+                                        delegationData.origin = data;
+
+                                        self.debug('[Service.register] Delegate target %s to %s', str(target), str(bubbler));
+                                        delegationData.__delegate__ = target;
+                                        self.act(bubbler, delegationData, delegationHandler || resolver);
                                     }]);
                                 }
                             });
