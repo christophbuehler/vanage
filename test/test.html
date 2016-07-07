@@ -10,9 +10,11 @@
         manager.register({
             module: 'error'
         }, (args, done) => {
+            console.info('ERR', args);
+
             if(args.error) {
                 console.error(args.error + ' (delegated from ' + JSON.stringify(args.__delegate__) + ' with data ' + JSON.stringify(args.origin) + ')');
-                return done('fail');
+                return done(new Error('There was an error in your application'));
             } else {
                 // no error available, simply skip ... 
                 done(null);
@@ -22,20 +24,26 @@
         var appcacheReady = manager.register({
             module: 'appcache',
             event: 'ready'
-        }, (args, done) => {
-            if(args.state === 3) { // updateready
+        }, (args, done, delegate) => {
+            console.info('REGISTER', args);
+            if(args.state === 5) { // updateready
                 done(null, window.applicationCache);
             } else {
-                done(('Appcache status is not updateready!'));
+                return delegate({
+                    module: 'error'
+                }, {
+                    error: new Error('State is not equal 3')
+                });
             }
         });
 
-        // manager.unregister(appcacheReady); WORKS!
+        // manager.unregister(appcacheReady); WORKS FINE!
 
         manager.delegate({
             module: 'appcache',
             event: 'error'
         }, (delegate, data) => {
+            console.info('DELEGATE', data);
             delegate({ module: 'error' }, data);
         });
 
@@ -43,21 +51,16 @@
             module: 'appcache',
             event: 'ready'
         }, {
-            state: window.applicationCache.UPDATEREADY
+            state: 1
         }, (err, result, delegate) => {
+            console.info('ACT', err, result);
             if(err) {
-                delegate({
-                    module: 'appcache',
-                    event: 'error'
-                }, {
-                    error: err
-                });
-
+                console.error(err);
                 return false;
             }
 
             if(confirm('Cache is updateready, swap and reload?')) {
-                result.swap();
+                console.warn('Swapping cache now ...');
                 window.location.reload();
             }
         });
