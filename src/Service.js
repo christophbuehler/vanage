@@ -134,7 +134,7 @@ class Service {
             let history = this._history.get(key);
             if(factory.pattern.match(history.target)) {
               this.debug('[Service.register] Found actOnce in history %s', str(ressource));
-              this._handle(factory, history.target, history.data);
+              this._handle(factory, history.target, history.data, history.resolver);
               this._history.unset(key);
               this.debug('[Service.register] Removed actOnce from history %s', str(ressource));
             }
@@ -256,7 +256,6 @@ class Service {
             Object.assign(target, bubbler);
             Object.assign(data, delegationData);
 
-            // TODO: Ev. Mixin with previous origin via Object.assign?
             delegationData.origin = data;
 
             self.debug('[Service._handle] Delegate target %s to %s', str(target), str(bubbler));
