@@ -234,7 +234,6 @@ class Service {
 
     _handle(factory, target, data, resolver) {
         const self = this;
-        self.debug('test');
         factory.handler.apply(null, [data, (error, result) => {
             // done handler implementation
             self.debug('[Service.act] Handling factory %s with data %s', str(target), str(data));
