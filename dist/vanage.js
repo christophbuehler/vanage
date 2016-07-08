@@ -779,6 +779,7 @@
                         key: '_handle',
                         value: function _handle(factory, target, data, resolver) {
                             var self = this;
+                            self.debug('test');
                             factory.handler.apply(null, [data, function(error, result) {
                                 // done handler implementation
                                 self.debug('[Service.act] Handling factory %s with data %s', str(target), str(data));
@@ -797,12 +798,15 @@
                                     delegationData = {};
                                 }
 
+                                Object.assign(target, bubbler);
+                                Object.assign(data, delegationData);
+
                                 // TODO: Ev. Mixin with previous origin via Object.assign?
                                 delegationData.origin = data;
 
-                                self.debug('[Service.register] Delegate target %s to %s', str(target), str(bubbler));
-                                delegationData.__delegate__ = target;
-                                self.act(bubbler, delegationData, delegationHandler || resolver);
+                                self.debug('[Service._handle] Delegate target %s to %s', str(target), str(bubbler));
+                                data.__delegate__ = target;
+                                self.act(target, data, delegationHandler || resolver);
                             }]);
                         }
                     }, {

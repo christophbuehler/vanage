@@ -4,9 +4,8 @@
 </head>
 <body>
     <script>
-        var manager = Vanage.create();
-        manager.set('debug', true);
-        
+        var manager = Vanage.create({ debug: true });
+
         manager.register({
             module: 'error'
         }, (args, done) => {
@@ -16,11 +15,11 @@
                 console.error(args.error + ' (delegated from ' + JSON.stringify(args.__delegate__) + ' with data ' + JSON.stringify(args.origin) + ')');
                 return done(new Error('There was an error in your application'));
             } else {
-                // no error available, simply skip ... 
+                // no error available, simply skip ...
                 done(null);
             }
         });
-        
+
         var appcacheReady = manager.register({
             module: 'appcache',
             event: 'ready'
