@@ -239,6 +239,11 @@
                         this.dirty = true;
                     }
                 }, {
+                    key: 'unset',
+                    value: function unset(key) {
+                        delete this.internals[key];
+                    }
+                }, {
                     key: 'get',
                     value: function get(key) {
                         return this.internals[key];
@@ -547,6 +552,8 @@
                         this._cache = new Cache();
                         this._delegates = [];
                         this._handlers = [];
+
+                        this._postConfigHook();
                     }
 
                     _createClass(Service, [{
@@ -646,6 +653,8 @@
                     }, {
                         key: 'register',
                         value: function register(ressource, handler) {
+                            var _this = this;
+
                             var self = this;
                             this.debug('[Service.register] Registring new handler for %s', str(ressource));
 
@@ -658,6 +667,16 @@
                                 handler: handler,
                                 rootService: self._internalId
                             };
+
+                            this._history.entries.forEach(function(key) {
+                                var history = _this._history.get(key);
+                                if (factory.pattern.match(history.target)) {
+                                    _this.debug('[Service.register] Found actOnce in history %s', str(ressource));
+                                    _this._handle(factory, history.target, history.data);
+                                    _this._history.unset(key);
+                                    _this.debug('[Service.register] Removed actOnce from history %s', str(ressource));
+                                }
+                            });
 
                             var index = this._handlers.push(factory);
                             var registry = this._handlers[index - 1];
@@ -692,8 +711,25 @@
                             return factory.pattern.id;
                         }
                     }, {
+                        key: 'actOnce',
+                        value: function actOnce(target, data, resolver) {
+                            data = data || {};
+                            this.debug('[Service.actOnce] %s once for %s with data %s', data.__delegate__ ? 'Delegating Action' : 'Acting', str(target), str(data));
+                            if (this.act.apply(this, arguments)) return true;
+                            this._history.set(new Pattern(target).signature, {
+                                data: data,
+                                stamp: Date.now(),
+                                target: target,
+                                resolver: resolver
+                            });
+                            return false;
+                        }
+                    }, {
                         key: 'act',
                         value: function act(target, data, resolver) {
+                            var _this2 = this;
+
+                            var didAct = false;
                             var self = this;
 
                             data = data || {};
@@ -704,60 +740,68 @@
                             }
 
                             this.debug('[Service.act] %s for %s with data %s', data.__delegate__ ? 'Delegating Action' : 'Acting', str(target), str(data));
-                            this._history.set(new Pattern(target).signature, {
-                                data: data,
-                                stamp: Date.now(),
-                                target: target,
-                                resolver: resolver
-                            });
 
                             this._delegates.forEach(function(delegation) {
                                 if (delegation.pattern.match(target)) {
-                                    self.debug('[Service.delegate] Found delegation for %s', str(target));
-                                    delegation.delegate.apply(null, [function(bubbler, delegationData) {
-                                        if ((typeof delegationData === 'undefined' ? 'undefined' : _typeof(delegationData)) !== 'object') {
-                                            delegationData = {};
-                                        }
-
-                                        // TODO: Ev. Mixin with previous origin via Object.assign?
-                                        delegationData.origin = data;
-
-                                        self.debug('[Service.delegate] Delegate target %s to %s', str(target), str(bubbler));
-                                        delegationData.__delegate__ = target;
-                                        self.act(bubbler, delegationData, resolver);
-                                    }]);
+                                    didAct = true;
+                                    _this2._delegate(delegation, target, data);
                                 }
                             });
 
                             this._handlers.forEach(function(factory) {
                                 if (factory.pattern.match(target)) {
-                                    factory.handler.apply(null, [data, function(error, result) {
-                                        // done handler implementation
-                                        self.debug('[Service.act] Handling factory %s with data %s', str(target), str(data));
-                                        return resolver.apply(null, [error, result, function(delegate, delegationData) {
-                                            if ((typeof delegationData === 'undefined' ? 'undefined' : _typeof(delegationData)) !== 'object') {
-                                                delegationData = {};
-                                            }
-
-                                            delegationData.__delegate__ = target;
-                                            delegationData.origin = data;
-                                            self.act(delegate, delegationData);
-                                        }]);
-                                    }, function(bubbler, delegationData, delegationHandler) {
-                                        // delegation handler implementation
-                                        if ((typeof delegationData === 'undefined' ? 'undefined' : _typeof(delegationData)) !== 'object') {
-                                            delegationData = {};
-                                        }
-
-                                        // TODO: Ev. Mixin with previous origin via Object.assign?
-                                        delegationData.origin = data;
-
-                                        self.debug('[Service.register] Delegate target %s to %s', str(target), str(bubbler));
-                                        delegationData.__delegate__ = target;
-                                        self.act(bubbler, delegationData, delegationHandler || resolver);
-                                    }]);
+                                    didAct = true;
+                                    _this2._handle(factory, target, data);
                                 }
                             });
+
+                            return didAct;
+                        }
+                    }, {
+                        key: '_delegate',
+                        value: function _delegate(delegation, target, data) {
+                            self.debug('[Service.delegate] Found delegation for %s', str(target));
+                            delegation.delegate.apply(null, [function(bubbler, delegationData) {
+                                if ((typeof delegationData === 'undefined' ? 'undefined' : _typeof(delegationData)) !== 'object') {
+                                    delegationData = {};
+                                }
+
+                                // TODO: Ev. Mixin with previous origin via Object.assign?
+                                delegationData.origin = data;
+
+                                self.debug('[Service.delegate] Delegate target %s to %s', str(target), str(bubbler));
+                                delegationData.__delegate__ = target;
+                                self.act(bubbler, delegationData, resolver);
+                            }]);
+                        }
+                    }, {
+                        key: '_handle',
+                        value: function _handle(factory, target, data) {
+                            factory.handler.apply(null, [data, function(error, result) {
+                                // done handler implementation
+                                self.debug('[Service.act] Handling factory %s with data %s', str(target), str(data));
+                                return resolver.apply(null, [error, result, function(delegate, delegationData) {
+                                    if ((typeof delegationData === 'undefined' ? 'undefined' : _typeof(delegationData)) !== 'object') {
+                                        delegationData = {};
+                                    }
+
+                                    delegationData.__delegate__ = target;
+                                    delegationData.origin = data;
+                                    self.act(delegate, delegationData);
+                                }]);
+                            }, function(bubbler, delegationData, delegationHandler) {
+                                // delegation handler implementation
+                                if ((typeof delegationData === 'undefined' ? 'undefined' : _typeof(delegationData)) !== 'object') {
+                                    delegationData = {};
+                                }
+
+                                // TODO: Ev. Mixin with previous origin via Object.assign?
+                                delegationData.origin = data;
+
+                                self.debug('[Service.register] Delegate target %s to %s', str(target), str(bubbler));
+                                delegationData.__delegate__ = target;
+                                self.act(bubbler, delegationData, delegationHandler || resolver);
+                            }]);
                         }
                     }, {
                         key: 'fail',

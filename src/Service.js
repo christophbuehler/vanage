@@ -23,6 +23,8 @@ class Service {
         this._cache = new Cache();
         this._delegates = [];
         this._handlers = [];
+
+        this._postConfigHook();
     }
 
     configure(options) {
@@ -127,6 +129,16 @@ class Service {
             handler: handler,
             rootService: self._internalId
         };
+        
+        this._history.entries.forEach(key => {
+            let history = this._history.get(key);
+            if(factory.pattern.match(history.target)) {
+              this.debug('[Service.register] Found actOnce in history %s', str(ressource));
+              this._handle(factory, history.target, history.data);
+              this._history.unset(key);
+              this.debug('[Service.register] Removed actOnce from history %s', str(ressource));
+            }
+        });
 
         const index = this._handlers.push(factory);
         const registry = this._handlers[index - 1];
@@ -160,7 +172,21 @@ class Service {
         return factory.pattern.id;
     }
 
+    actOnce(target, data, resolver) {
+      data = data || {};
+      this.debug('[Service.actOnce] %s once for %s with data %s', data.__delegate__ ? 'Delegating Action' : 'Acting', str(target), str(data));
+      if(this.act.apply(this, arguments)) return true;
+      this._history.set(new Pattern(target).signature, {
+          data: data,
+          stamp: Date.now(),
+          target: target,
+          resolver: resolver
+      });
+      return false;
+    }
+
     act(target, data, resolver) {
+        let didAct = false;
         const self = this;
 
         data = data || {};
@@ -171,60 +197,66 @@ class Service {
         }
 
         this.debug('[Service.act] %s for %s with data %s', data.__delegate__ ? 'Delegating Action' : 'Acting', str(target), str(data));
-        this._history.set(new Pattern(target).signature, {
-            data: data,
-            stamp: Date.now(),
-            target: target,
-            resolver: resolver
-        });
 
         this._delegates.forEach(delegation => {
             if(delegation.pattern.match(target)) {
-                self.debug('[Service.delegate] Found delegation for %s', str(target));
-                delegation.delegate.apply(null, [(bubbler, delegationData) => {
-                    if(typeof delegationData !== 'object') {
-                        delegationData = {};
-                    }
-                    
-                    // TODO: Ev. Mixin with previous origin via Object.assign?
-                    delegationData.origin = data;
-
-                    self.debug('[Service.delegate] Delegate target %s to %s', str(target), str(bubbler));
-                    delegationData.__delegate__ = target;
-                    self.act(bubbler, delegationData, resolver);
-                }]);
+                didAct = true;
+                this._delegate(delegation, target, data);
             }
         });
 
         this._handlers.forEach(factory => {
             if(factory.pattern.match(target)) {
-                factory.handler.apply(null, [data, (error, result) => {
-                    // done handler implementation
-                    self.debug('[Service.act] Handling factory %s with data %s', str(target), str(data));
-                    return resolver.apply(null, [error, result, (delegate, delegationData) => {
-                        if(typeof delegationData !== 'object') {
-                            delegationData = {};
-                        }
-
-                        delegationData.__delegate__ = target;
-                        delegationData.origin = data;
-                        self.act(delegate, delegationData);
-                    }]);
-                }, (bubbler, delegationData, delegationHandler) => {
-                    // delegation handler implementation
-                    if(typeof delegationData !== 'object') {
-                        delegationData = {};
-                    }
-                    
-                    // TODO: Ev. Mixin with previous origin via Object.assign?
-                    delegationData.origin = data;
-
-                    self.debug('[Service.register] Delegate target %s to %s', str(target), str(bubbler));
-                    delegationData.__delegate__ = target;
-                    self.act(bubbler, delegationData, delegationHandler || resolver);
-                }]);
+                didAct = true;
+                this._handle(factory, target, data);
             }
         });
+
+        return didAct;
+    }
+
+    _delegate(delegation, target, data) {
+        self.debug('[Service.delegate] Found delegation for %s', str(target));
+        delegation.delegate.apply(null, [(bubbler, delegationData) => {
+            if(typeof delegationData !== 'object') {
+                delegationData = {};
+            }
+
+            // TODO: Ev. Mixin with previous origin via Object.assign?
+            delegationData.origin = data;
+
+            self.debug('[Service.delegate] Delegate target %s to %s', str(target), str(bubbler));
+            delegationData.__delegate__ = target;
+            self.act(bubbler, delegationData, resolver);
+        }]);
+    }
+
+    _handle(factory, target, data) {
+        factory.handler.apply(null, [data, (error, result) => {
+            // done handler implementation
+            self.debug('[Service.act] Handling factory %s with data %s', str(target), str(data));
+            return resolver.apply(null, [error, result, (delegate, delegationData) => {
+                if(typeof delegationData !== 'object') {
+                    delegationData = {};
+                }
+
+                delegationData.__delegate__ = target;
+                delegationData.origin = data;
+                self.act(delegate, delegationData);
+            }]);
+        }, (bubbler, delegationData, delegationHandler) => {
+            // delegation handler implementation
+            if(typeof delegationData !== 'object') {
+                delegationData = {};
+            }
+
+            // TODO: Ev. Mixin with previous origin via Object.assign?
+            delegationData.origin = data;
+
+            self.debug('[Service.register] Delegate target %s to %s', str(target), str(bubbler));
+            delegationData.__delegate__ = target;
+            self.act(bubbler, delegationData, delegationHandler || resolver);
+        }]);
     }
 
     fail(err) {

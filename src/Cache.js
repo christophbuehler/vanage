@@ -20,6 +20,10 @@ class Cache {
         this.dirty = true;
     }
 
+    unset(key) {
+      delete this.internals[key];
+    }
+
     get(key) {
         return this.internals[key];
     }
