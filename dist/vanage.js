@@ -744,14 +744,14 @@
                             this._delegates.forEach(function(delegation) {
                                 if (delegation.pattern.match(target)) {
                                     didAct = true;
-                                    _this2._delegate(delegation, target, data);
+                                    _this2._delegate(delegation, target, data, resolver);
                                 }
                             });
 
                             this._handlers.forEach(function(factory) {
                                 if (factory.pattern.match(target)) {
                                     didAct = true;
-                                    _this2._handle(factory, target, data);
+                                    _this2._handle(factory, target, data, resolver);
                                 }
                             });
 
@@ -759,7 +759,8 @@
                         }
                     }, {
                         key: '_delegate',
-                        value: function _delegate(delegation, target, data) {
+                        value: function _delegate(delegation, target, data, resolver) {
+                            var self = this;
                             self.debug('[Service.delegate] Found delegation for %s', str(target));
                             delegation.delegate.apply(null, [function(bubbler, delegationData) {
                                 if ((typeof delegationData === 'undefined' ? 'undefined' : _typeof(delegationData)) !== 'object') {
@@ -776,7 +777,8 @@
                         }
                     }, {
                         key: '_handle',
-                        value: function _handle(factory, target, data) {
+                        value: function _handle(factory, target, data, resolver) {
+                            var self = this;
                             factory.handler.apply(null, [data, function(error, result) {
                                 // done handler implementation
                                 self.debug('[Service.act] Handling factory %s with data %s', str(target), str(data));

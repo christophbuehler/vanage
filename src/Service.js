@@ -129,7 +129,7 @@ class Service {
             handler: handler,
             rootService: self._internalId
         };
-        
+
         this._history.entries.forEach(key => {
             let history = this._history.get(key);
             if(factory.pattern.match(history.target)) {
@@ -201,21 +201,22 @@ class Service {
         this._delegates.forEach(delegation => {
             if(delegation.pattern.match(target)) {
                 didAct = true;
-                this._delegate(delegation, target, data);
+                this._delegate(delegation, target, data, resolver);
             }
         });
 
         this._handlers.forEach(factory => {
             if(factory.pattern.match(target)) {
                 didAct = true;
-                this._handle(factory, target, data);
+                this._handle(factory, target, data, resolver);
             }
         });
 
         return didAct;
     }
 
-    _delegate(delegation, target, data) {
+    _delegate(delegation, target, data, resolver) {
+        const self = this;
         self.debug('[Service.delegate] Found delegation for %s', str(target));
         delegation.delegate.apply(null, [(bubbler, delegationData) => {
             if(typeof delegationData !== 'object') {
@@ -231,7 +232,8 @@ class Service {
         }]);
     }
 
-    _handle(factory, target, data) {
+    _handle(factory, target, data, resolver) {
+        const self = this;
         factory.handler.apply(null, [data, (error, result) => {
             // done handler implementation
             self.debug('[Service.act] Handling factory %s with data %s', str(target), str(data));
